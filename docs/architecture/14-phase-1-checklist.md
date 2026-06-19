@@ -14,7 +14,7 @@ authored and verified **offline / statically** like Phase 0.
 |----|-------|:------:|
 | P1-W1 | Inventory subtypes (raw_material, semi_finished, product, unit_conversion) | ✅ |
 | P1-W2 | Branch-specific product (pricing/availability) | ✅ |
-| P1-W3 | Catalog & recipes (recipe, recipe_version, recipe_ingredient) | ⬜ |
+| P1-W3 | Catalog & recipes (recipe, recipe_version, recipe_ingredient) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -51,3 +51,21 @@ authored and verified **offline / statically** like Phase 0.
 - **Acceptance:** RLS-protected least-privilege (Owner full, Manager own-branch manage,
   staff/baker read); branch+product forced to share a tenant. Guard green.
 - **Deferred:** customer menu read arrives with QR ordering.
+
+---
+
+## P1-W3 — Catalog & recipes ✅
+
+> **Scope:** recipe → recipe_version (immutable once active) → recipe_ingredient (single FK
+> to inventory_item, N1). DB-enforced version control. RLS-first. Offline / static-reviewed.
+
+- **Objective:** Versioned recipes with database-enforced immutability and a single-FK BoM.
+- **Migrations:** `0010_catalog_recipes.sql`.
+- **Tests:** static schema (FK chain, single-FK ingredient, status/quantity checks); version
+  control (one-active partial unique; active/retired immutability triggers; ingredient
+  freeze; SECURITY DEFINER status helper); RLS on all three. RLS guard updated to 17 tables.
+- **Acceptance:** active versions content-frozen (only active→retired); retired fully
+  immutable; ≤1 active version per recipe; active-version ingredients frozen; RLS
+  least-privilege. Guard green.
+- **Deferred:** Manager draft authoring + activation *workflow* (Owner-write for now);
+  restrict ingredient `item_id` to raw/semi kinds; live runtime proof pending a DB.

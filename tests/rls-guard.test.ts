@@ -29,6 +29,10 @@ const BUSINESS_TABLES = [
   'unit_conversion',
   // Phase 1 — P1-W2 branch product (F2)
   'branch_product',
+  // Phase 1 — P1-W3 catalog & recipes
+  'recipe',
+  'recipe_version',
+  'recipe_ingredient',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
