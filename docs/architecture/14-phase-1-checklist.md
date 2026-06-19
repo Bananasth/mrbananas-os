@@ -16,6 +16,7 @@ authored and verified **offline / statically** like Phase 0.
 | P1-W2 | Branch-specific product (pricing/availability) | ✅ |
 | P1-W3 | Catalog & recipes (recipe, recipe_version, recipe_ingredient) | ✅ |
 | P1-W4 | Suppliers & purchasing (supplier, purchase_order, purchase_order_line) | ✅ |
+| P1-W5 | Inventory ledger (lots, movements, stock-on-hand, receiving) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -88,3 +89,24 @@ authored and verified **offline / statically** like Phase 0.
 - **Acceptance:** branch isolation on PO + lines (lines via `purchase_order_branch()`
   helper); supplier/PO/line RLS least-privilege. Guard green.
 - **Deferred:** receiving → inventory movements/lots (inventory-ledger module).
+
+---
+
+## P1-W5 — Inventory ledger ✅
+
+> **Scope:** lots, the append-only movement ledger (N3 source of truth), the qty_on_hand
+> cache, a guarded receiving primitive, and shelf_life/stock_on_hand views (N2). RLS-first.
+> Offline / static-reviewed.
+
+- **Objective:** receiving + inventory movement + stock-on-hand foundation.
+- **Migrations:** `0012_inventory_ledger.sql`.
+- **Tests:** static schema (lot cache/expiry/status, movement reason enum + non-zero delta,
+  tenant-safe FKs, FEFO index); append-only movement (reuses reject_mutation) + qty_on_hand
+  maintenance trigger; guarded `receive_inventory` (SECURITY DEFINER + internal authz);
+  shelf_life/stock_on_hand views (security_invoker); RLS. Guard updated to 22 tables.
+- **Acceptance:** ledger append-only; qty_on_hand maintained from movements with a `>= 0`
+  CHECK preventing over-depletion; receiving validates tenant + branch role; shelf life is a
+  view (N2); FEFO = order by expires_at. Guard green.
+- **Deferred:** atomic locked decrement at point-of-sale (I1, Phase 3 POS);
+  qty_on_hand-freeze against direct edits; nightly ledger reconciliation job (Edge
+  Function); inventory_lot.batch_id FK (Phase 2 production); live runtime proof pending a DB.

@@ -37,6 +37,9 @@ const BUSINESS_TABLES = [
   'supplier',
   'purchase_order',
   'purchase_order_line',
+  // Phase 1 — P1-W5 inventory ledger (lots + movements; shelf_life/stock_on_hand are views)
+  'inventory_lot',
+  'inventory_movement',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
