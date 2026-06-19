@@ -27,6 +27,8 @@ const BUSINESS_TABLES = [
   'raw_material',
   'semi_finished',
   'unit_conversion',
+  // Phase 1 — P1-W2 branch product (F2)
+  'branch_product',
 ].sort()
 
 describe('RLS guard — real migrations', () => {

@@ -13,7 +13,7 @@ authored and verified **offline / statically** like Phase 0.
 | WP | Title | Status |
 |----|-------|:------:|
 | P1-W1 | Inventory subtypes (raw_material, semi_finished, product, unit_conversion) | ✅ |
-| P1-W2 | Branch-specific product (pricing/availability) | ⬜ |
+| P1-W2 | Branch-specific product (pricing/availability) | ✅ |
 | P1-W3 | Catalog & recipes (recipe, recipe_version, recipe_ingredient) | ⬜ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
@@ -35,3 +35,19 @@ authored and verified **offline / statically** like Phase 0.
   enforced by composite FKs; guard green.
 - **Deferred (documented):** product↔inventory_item tenant-match is app-enforced for the
   optional link; product `finished`-kind tie deferred; live runtime proof pending a DB.
+
+---
+
+## P1-W2 — Branch-specific product (F2) ✅
+
+> **Scope:** per-branch price override + availability/menu placement. RLS-first; money in
+> integer minor units. Offline / static-reviewed.
+
+- **Objective:** `branch_product` so franchises override price/availability per branch while
+  orders/invoices still snapshot the effective price.
+- **Migrations:** `0009_branch_product.sql`.
+- **Tests:** static schema (composite-FK tenant match, minor-unit price, availability, one
+  override per product/branch, RLS Owner/Manager/member); RLS guard updated to 14 tables.
+- **Acceptance:** RLS-protected least-privilege (Owner full, Manager own-branch manage,
+  staff/baker read); branch+product forced to share a tenant. Guard green.
+- **Deferred:** customer menu read arrives with QR ordering.
