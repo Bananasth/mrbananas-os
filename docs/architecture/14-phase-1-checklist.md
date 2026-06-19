@@ -19,6 +19,10 @@ authored and verified **offline / statically** like Phase 0.
 | P1-W5 | Inventory ledger (lots, movements, stock-on-hand, receiving) | ✅ |
 | P2-W1 | Production core (plan, batch, stage, event) | ✅ |
 | P2-W2 | Batch-execution primitives (consume, complete, produce, reconcile) | ✅ |
+| P3-W1 | Sales orders (sales_order + order_item traceability anchor) | ✅ |
+| P3-W2 | Inventory deduction at sale (I1 atomic) | ⬜ |
+| P3-W3 | Payment | ⬜ |
+| P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ⬜ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -151,3 +155,21 @@ authored and verified **offline / statically** like Phase 0.
   queryable. Production now reads/writes the ledger end-to-end.
 - **Deferred:** scrap→waste routing (waste module, Phase 4); recipe-driven auto-consume of a
   whole BoM (service layer); live runtime proof pending a DB.
+
+---
+
+## P3-W1 — Sales orders ✅
+
+> **Scope:** `sales_order` header + `order_item` traceability anchor. RLS-first. Offline /
+> static-reviewed. (`order` is a SQL reserved word → table named `sales_order`.)
+
+- **Objective:** the order schema with full traceability anchors.
+- **Migrations:** `0015_sales_orders.sql`.
+- **Tests:** static schema (minor-unit money + snapshot totals, unique invoice_id, channel/
+  status enums; order_item pins recipe_version + workstation + employee + batch; branch-local
+  order & workstation FKs; RLS). RLS guard updated to 28 tables.
+- **Acceptance:** order_item captures the full chain `order_item -> batch -> production_batch`
+  and `-> recipe_version`; tenant + branch safe; RLS least-privilege (Owner full; Manager/
+  Staff take orders; Staff/Baker fulfil items; staff read). Guard green.
+- **Deferred (next WPs):** inventory deduction at sale (I1, P3-W2), payment (P3-W3), tax
+  invoice (P3-W4); QR customer self-order (QR module); live runtime proof pending a DB.

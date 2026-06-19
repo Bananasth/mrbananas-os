@@ -45,6 +45,9 @@ const BUSINESS_TABLES = [
   'production_batch',
   'batch_stage',
   'batch_event',
+  // Phase 3 — sales core
+  'sales_order',
+  'order_item',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
