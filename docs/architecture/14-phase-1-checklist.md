@@ -23,6 +23,8 @@ authored and verified **offline / statically** like Phase 0.
 | P3-W2 | Inventory deduction at sale (I1 atomic) | ✅ |
 | P3-W3 | Payment | ✅ |
 | P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ✅ |
+| P4-W1 | Quarantine (quarantine lots + block sale/consume) | ✅ |
+| P4-W2 | Recall (tracing + lifecycle + audit) | ⬜ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -231,3 +233,21 @@ authored and verified **offline / statically** like Phase 0.
   green.
 - **Deferred:** credit-note issuance flow, e-Tax Invoice export (Edge Function), refund
   linkage; live runtime proof pending a DB. **Phase 3 sales core complete.**
+
+---
+
+## P4-W1 — Quarantine ✅
+
+> **Scope:** quarantine inventory lots + block their sale/consumption, audited. RLS-first.
+> Offline / static-reviewed.
+
+- **Objective:** quarantine/release lots; make quarantined stock unsellable.
+- **Migrations:** `0019_quarantine.sql`.
+- **Tests:** static — quarantine metadata on lot; audit trigger on inventory_lot;
+  `guard_quarantined_movement` blocks sell/consume from quarantined lots; `quarantine_lot`/
+  `release_lot` SECURITY DEFINER primitives with authz. No new tables; guard unchanged (32).
+- **Acceptance:** (1) quarantine a lot via primitive (Owner/Manager); (2) block sale —
+  FEFO already skips non-available lots AND a BEFORE INSERT guard rejects sell/consume
+  movements against quarantined lots; (4-partial) lot changes audited. Guard green.
+- **Deferred (P4-W2):** recall record + lifecycle, full trace
+  supplier→lot→movement→batch→order_item→sales_order, recall audit log.
