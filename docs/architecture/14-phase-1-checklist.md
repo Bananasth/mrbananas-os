@@ -21,7 +21,7 @@ authored and verified **offline / statically** like Phase 0.
 | P2-W2 | Batch-execution primitives (consume, complete, produce, reconcile) | ✅ |
 | P3-W1 | Sales orders (sales_order + order_item traceability anchor) | ✅ |
 | P3-W2 | Inventory deduction at sale (I1 atomic) | ✅ |
-| P3-W3 | Payment | ⬜ |
+| P3-W3 | Payment | ✅ |
 | P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ⬜ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
@@ -193,3 +193,21 @@ authored and verified **offline / statically** like Phase 0.
 - **Note:** sale deduction aligned to **FEFO** (earliest expiry first, fall back to
   received_at when equal/null) — matches production consumption (`deduct_fefo`).
 - **Deferred:** payment (P3-W3), tax invoice (P3-W4); live concurrency proof pending a DB.
+
+---
+
+## P3-W3 — Payment ✅
+
+> **Scope:** payments against a sales_order. RLS-first; idempotent; tokenized (no card data).
+> Offline / static-reviewed.
+
+- **Objective:** `payment` with money in minor units, idempotency, and a tokenized gateway
+  reference.
+- **Migrations:** `0017_payment.sql`.
+- **Tests:** static schema (branch-local order FK, minor-unit amount, method/status enums,
+  idempotency unique, tokenized — no card-data columns, RLS, trigger). RLS guard → 29 tables.
+- **Acceptance:** idempotent via `unique(order_id, client_uuid)` (no double-charge on retry);
+  only an opaque `gateway_ref` stored (PCI scope-out); RLS least-privilege (Owner full,
+  Manager/Staff take payment, staff read). Guard green.
+- **Deferred:** refund modeling, payment→order total reconciliation, tax invoice (P3-W4);
+  live runtime proof pending a DB.
