@@ -22,7 +22,10 @@
     "db:new": "npx --yes supabase migration new",
     "db:up": "npx --yes supabase migration up",
     "db:reset": "npx --yes supabase db reset",
-    "db:diff": "npx --yes supabase db diff"
+    "db:diff": "npx --yes supabase db diff",
+    "runtime:apply": "node tests/runtime/runtime.mjs apply",
+    "runtime:seed": "node tests/runtime/runtime.mjs seed",
+    "runtime:validate": "node tests/runtime/runtime.mjs validate"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -32,6 +35,7 @@
   "devDependencies": {
     "@eslint/js": "^9.15.0",
     "@vitest/coverage-v8": "^4.0.0",
+    "pg": "^8.13.0",
     "@types/node": "^22.9.0",
     "eslint": "^9.15.0",
     "prettier": "^3.3.0",

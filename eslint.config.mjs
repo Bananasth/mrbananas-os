@@ -4,7 +4,16 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['node_modules', 'dist', 'build', '.next', 'coverage', 'supabase/.temp'],
+    // tests/runtime is ops tooling that talks to a live DB; not part of the offline gate.
+    ignores: [
+      'node_modules',
+      'dist',
+      'build',
+      '.next',
+      'coverage',
+      'supabase/.temp',
+      'tests/runtime',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

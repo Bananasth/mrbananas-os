@@ -9,6 +9,9 @@ package-lock.json
 # Non-JS config Prettier has no parser for (handled by .editorconfig)
 *.toml
 
+# Runtime validation harness (ops tooling, not gate-checked)
+tests/runtime/
+
 # Architecture docs are a hand-authored deliverable with intentional table/emoji
 # formatting — Prettier (code formatter) is scoped to app code + the repo README.
 docs/
