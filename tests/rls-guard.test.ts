@@ -11,7 +11,8 @@ const combined = readdirSync(dir)
   .map((f) => readFileSync(`${dir}/${f}`, 'utf8'))
   .join('\n')
 
-const PHASE0_TABLES = [
+const BUSINESS_TABLES = [
+  // Phase 0
   'app_user',
   'audit_log',
   'branch',
@@ -21,13 +22,18 @@ const PHASE0_TABLES = [
   'tenant',
   'user_branch_role',
   'workstation',
+  // Phase 1 — P1-W1 inventory subtypes
+  'product',
+  'raw_material',
+  'semi_finished',
+  'unit_conversion',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
   const report = analyzeMigrations(combined)
 
-  it('detects every Phase-0 business table', () => {
-    expect(report.tables).toEqual(PHASE0_TABLES)
+  it('detects every business table', () => {
+    expect(report.tables).toEqual(BUSINESS_TABLES)
   })
 
   it('reports ZERO RLS violations (every table has RLS + a net policy)', () => {
