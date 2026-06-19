@@ -18,6 +18,7 @@ authored and verified **offline / statically** like Phase 0.
 | P1-W4 | Suppliers & purchasing (supplier, purchase_order, purchase_order_line) | ✅ |
 | P1-W5 | Inventory ledger (lots, movements, stock-on-hand, receiving) | ✅ |
 | P2-W1 | Production core (plan, batch, stage, event) | ✅ |
+| P2-W2 | Batch-execution primitives (consume, complete, produce, reconcile) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -129,6 +130,24 @@ authored and verified **offline / statically** like Phase 0.
 - **Acceptance:** batch pins recipe_version + branch-local workstation; per-stage provenance;
   failure/partial-yield first-class; event log append-only; produced lots link back to the
   batch. Guard green.
-- **Deferred:** stage-timer / multi-day SLA logic, yield→finished-lot automation, batch
-  consumption of inventory (service layer), quarantine/recall workflow (Phase 4); live
-  runtime proof pending a DB.
+- **Deferred:** stage-timer / multi-day SLA logic, quarantine/recall workflow (Phase 4);
+  live runtime proof pending a DB.
+
+---
+
+## P2-W2 — Batch-execution primitives ✅
+
+> **Scope:** close the production↔inventory loop with guarded DB primitives. No new tables.
+> Offline / static-reviewed.
+
+- **Objective:** consume inventory, complete batches, produce finished lots, reconcile yield.
+- **Migrations:** `0014_batch_execution.sql`.
+- **Tests:** static — `consume_for_batch` (SECURITY DEFINER, FEFO + row-lock, negative
+  consume movements ref the batch, insufficient-stock raise); `complete_batch` (status guard,
+  finished-item resolution via recipe→product, produce movement from actual_yield, batch
+  reconciliation); `production_batch_yield` variance view.
+- **Acceptance:** consumption is FEFO and authorized; completion produces a finished lot of
+  exactly actual_yield linked to the batch and marks it completed; yield variance is
+  queryable. Production now reads/writes the ledger end-to-end.
+- **Deferred:** scrap→waste routing (waste module, Phase 4); recipe-driven auto-consume of a
+  whole BoM (service layer); live runtime proof pending a DB.
