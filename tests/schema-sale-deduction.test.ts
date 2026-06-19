@@ -9,15 +9,15 @@ const sql = readFileSync(
 ).toLowerCase()
 const norm = sql.replace(/\s+/g, ' ')
 
-describe('0016 deduct_fifo helper', () => {
+describe('0016 deduct_fefo helper', () => {
   it('is a SECURITY DEFINER helper, locked down from public', () => {
-    expect(norm).toContain('create or replace function app.deduct_fifo(')
-    expect(norm).toMatch(/deduct_fifo\([\s\S]*?security definer/)
-    expect(norm).toContain('revoke all on function app.deduct_fifo(')
+    expect(norm).toContain('create or replace function app.deduct_fefo(')
+    expect(norm).toMatch(/deduct_fefo\([\s\S]*?security definer/)
+    expect(norm).toContain('revoke all on function app.deduct_fefo(')
   })
 
-  it('consumes FIFO (oldest received first) atomically with row locking', () => {
-    expect(norm).toContain('order by received_at, id')
+  it('consumes FEFO (earliest expiry, then received_at) atomically with row locking', () => {
+    expect(norm).toContain('order by expires_at nulls last, received_at, id')
     expect(norm).toContain('for update')
   })
 

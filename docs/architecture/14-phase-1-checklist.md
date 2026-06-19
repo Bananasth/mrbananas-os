@@ -190,6 +190,6 @@ authored and verified **offline / statically** like Phase 0.
   insufficient stock; (3) FIFO lot consumption; (4) traceability — sell movements ref the
   order_item, consumed batch stamped onto bakery lines; (5) bakery deducts finished lots;
   (6) beverages deduct ingredients. No new tables; guard unchanged (28), green.
-- **Note:** sale deduction is **FIFO** (received_at) per the requirement; production consume
-  is **FEFO** (expiry). Flagged for alignment review (FEFO is the perishable default).
+- **Note:** sale deduction aligned to **FEFO** (earliest expiry first, fall back to
+  received_at when equal/null) — matches production consumption (`deduct_fefo`).
 - **Deferred:** payment (P3-W3), tax invoice (P3-W4); live concurrency proof pending a DB.

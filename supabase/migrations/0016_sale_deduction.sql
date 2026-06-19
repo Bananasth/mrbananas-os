@@ -4,14 +4,15 @@
 --   * bakery (product.type = 'batch')        -> deduct the finished-product lots, and stamp
 --                                                the consumed batch onto order_item (trace)
 --   * beverage (product.type = 'made_to_order') -> deduct each recipe ingredient
--- Deduction is FIFO (oldest received first), locks the lots it draws from (FOR UPDATE), and
--- rejects the sale if stock is insufficient. The lot qty_on_hand >= 0 CHECK is the final
+-- Deduction is FEFO (earliest expiry first; fall back to received_at when expiry is equal or
+-- null), aligned with production consumption. It locks the lots it draws from (FOR UPDATE)
+-- and rejects the sale if stock is insufficient. The lot qty_on_hand >= 0 CHECK is the final
 -- backstop. 'sell' movements reference the order_item, preserving traceability. No new
 -- tables, no data, no secrets.
 
--- Internal FIFO deduction helper. SECURITY DEFINER and revoked from public so only the
+-- Internal FEFO deduction helper. SECURITY DEFINER and revoked from public so only the
 -- fulfil primitive (running in the definer context) may call it.
-create or replace function app.deduct_fifo(
+create or replace function app.deduct_fefo(
   p_tenant      uuid,
   p_branch      uuid,
   p_item_id     uuid,
@@ -42,7 +43,7 @@ begin
       from public.inventory_lot
      where tenant_id = p_tenant and branch_id = p_branch and item_id = p_item_id
        and status = 'available' and qty_on_hand > 0
-     order by received_at, id -- FIFO
+     order by expires_at nulls last, received_at, id -- FEFO (then received_at)
      for update
   loop
     exit when v_remaining <= 0;
@@ -66,7 +67,7 @@ begin
 end;
 $$;
 
-revoke all on function app.deduct_fifo(uuid, uuid, uuid, numeric, text, text, uuid, uuid) from public;
+revoke all on function app.deduct_fefo(uuid, uuid, uuid, numeric, text, text, uuid, uuid) from public;
 
 -- Deduct inventory for a sold order line. SECURITY DEFINER with internal authorization.
 create or replace function app.fulfil_order_item(
@@ -105,7 +106,7 @@ begin
     if v_prod.inventory_item_id is null then
       raise exception 'batch product has no stockable inventory_item; cannot deduct';
     end if;
-    v_batch := app.deduct_fifo(
+    v_batch := app.deduct_fefo(
       v_tenant, v_oi.branch_id, v_prod.inventory_item_id, v_oi.qty,
       'sell', 'order_item', p_order_item_id, p_employee_id);
     -- Stamp the batch the sold item came from (traceability) when not already pinned.
@@ -119,7 +120,7 @@ begin
         from public.recipe_ingredient
        where recipe_version_id = v_oi.recipe_version_id and tenant_id = v_tenant
     loop
-      perform app.deduct_fifo(
+      perform app.deduct_fefo(
         v_tenant, v_oi.branch_id, ing.item_id, ing.quantity * v_oi.qty,
         'sell', 'order_item', p_order_item_id, p_employee_id);
     end loop;
