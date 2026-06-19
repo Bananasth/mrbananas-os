@@ -1,8 +1,8 @@
-# 14 — Phase 1 Implementation Checklist
+# 14 — Phase 1 & 2 Implementation Checklist
 
 > Part of the [MR.BANANA'S OS architecture set](./00-README.md). Status: **In progress.**
 
-Phase 1 builds **master data** on the Phase 0 foundation. Each table reuses the W11 RLS
+Phase 1 builds **master data** on the Phase 0 foundation; Phase 2 begins **production**. Each table reuses the W11 RLS
 policy template and is caught by the W12 guard if RLS is forgotten. Commit cadence: **one
 commit per work package**. The recommended live-DB + Auth + runtime integration task is
 **deferred** until a database (Docker/Supabase or equivalent) is available — current WPs are
@@ -17,6 +17,7 @@ authored and verified **offline / statically** like Phase 0.
 | P1-W3 | Catalog & recipes (recipe, recipe_version, recipe_ingredient) | ✅ |
 | P1-W4 | Suppliers & purchasing (supplier, purchase_order, purchase_order_line) | ✅ |
 | P1-W5 | Inventory ledger (lots, movements, stock-on-hand, receiving) | ✅ |
+| P2-W1 | Production core (plan, batch, stage, event) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -109,4 +110,25 @@ authored and verified **offline / statically** like Phase 0.
   view (N2); FEFO = order by expires_at. Guard green.
 - **Deferred:** atomic locked decrement at point-of-sale (I1, Phase 3 POS);
   qty_on_hand-freeze against direct edits; nightly ledger reconciliation job (Edge
-  Function); inventory_lot.batch_id FK (Phase 2 production); live runtime proof pending a DB.
+  Function); inventory_lot.batch_id FK (closed in P2-W1); live runtime proof pending a DB.
+
+---
+
+## P2-W1 — Production core ✅
+
+> **Scope:** the bakery traceability spine — plan → batch → stage → event. RLS-first.
+> Offline / static-reviewed.
+
+- **Objective:** `production_plan`, `production_batch`, `batch_stage`, `batch_event`.
+- **Migrations:** `0013_production_core.sql`.
+- **Tests:** static schema (FK chain, recipe_version pin, branch-checked workstation, six
+  stages); B1 per-stage employee + optional batch lead; B2 failed/scrapped + actual_yield;
+  append-only `batch_event`; closes `inventory_lot.batch_id` FK; RLS (Owner full, Manager+
+  Baker ops on batch/stage/event, Manager-only plan, staff read) via `batch_branch()` helper.
+  RLS guard updated to 26 tables.
+- **Acceptance:** batch pins recipe_version + branch-local workstation; per-stage provenance;
+  failure/partial-yield first-class; event log append-only; produced lots link back to the
+  batch. Guard green.
+- **Deferred:** stage-timer / multi-day SLA logic, yield→finished-lot automation, batch
+  consumption of inventory (service layer), quarantine/recall workflow (Phase 4); live
+  runtime proof pending a DB.
