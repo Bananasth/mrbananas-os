@@ -42,6 +42,8 @@ This is not a feature — it is the backbone the entire data model is built arou
 | 12 | Complaint Tracking | Customer complaints, resolution workflow |
 | 13 | Employee KPI & HR Data | Productivity, quality, attendance, shifts, time entry + **export** to an external HR/payroll system |
 
+> **Application phase:** [16 — Store MVP Implementation Roadmap](./16-mvp-roadmap.md) — Auth → API → Admin → POS → KDS → Deploy.
+
 > **HR boundary:** MR.BANANA'S OS is the *system of record* for KPI, attendance, shift
 > and time data, and *feeds* an external HR/payroll system. It does **not** calculate
 > payroll. See [Design Considerations §10](./09-design-considerations.md).
