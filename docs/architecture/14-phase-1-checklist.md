@@ -24,7 +24,7 @@ authored and verified **offline / statically** like Phase 0.
 | P3-W3 | Payment | ✅ |
 | P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ✅ |
 | P4-W1 | Quarantine (quarantine lots + block sale/consume) | ✅ |
-| P4-W2 | Recall (tracing + lifecycle + audit) | ⬜ |
+| P4-W2 | Recall (tracing + lifecycle + audit) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -251,3 +251,23 @@ authored and verified **offline / statically** like Phase 0.
   movements against quarantined lots; (4-partial) lot changes audited. Guard green.
 - **Deferred (P4-W2):** recall record + lifecycle, full trace
   supplier→lot→movement→batch→order_item→sales_order, recall audit log.
+
+---
+
+## P4-W2 — Recall ✅
+
+> **Scope:** the recall capstone — trace, lifecycle, snapshot, auto-quarantine, audit.
+> RLS-first. Offline / static-reviewed.
+
+- **Objective:** actionable recall over the traceability spine.
+- **Migrations:** `0020_recall.sql`.
+- **Tests:** static — recall/recall_action/recall_affected; lifecycle + scope enums; 4
+  affected entity types; append-only action/affected + audit on recall; `initiate_recall`
+  (supplier & lot seeds, recursive lot→batch→lot trace, 4-entity snapshot, auto-quarantine);
+  `advance_recall` forward-only lifecycle; RLS. Guard updated to 35 tables.
+- **Acceptance:** (1) full trace supplier→lot→movement→batch→order_item→sales_order;
+  (2) lifecycle initiated→investigating→completed→closed (forward-only); (3) snapshots lots/
+  batches/order_items/sales_orders immutably; (4) supplier- and lot-based recalls; (5) auto-
+  quarantines implicated lots; (6) immutable audit (append-only logs + audit_log). Guard green.
+- **Deferred:** customer-notification dispatch, recall reporting/exports; live runtime proof
+  of the trace pending a DB. **Phase 4 recall & quarantine complete.**

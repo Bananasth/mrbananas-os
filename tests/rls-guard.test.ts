@@ -52,6 +52,10 @@ const BUSINESS_TABLES = [
   'tax_invoice',
   'invoice_counter',
   'invoice_number_gap',
+  // Phase 4 — recall & quarantine
+  'recall',
+  'recall_action',
+  'recall_affected',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
