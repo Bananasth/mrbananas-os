@@ -22,7 +22,7 @@ authored and verified **offline / statically** like Phase 0.
 | P3-W1 | Sales orders (sales_order + order_item traceability anchor) | ✅ |
 | P3-W2 | Inventory deduction at sale (I1 atomic) | ✅ |
 | P3-W3 | Payment | ✅ |
-| P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ⬜ |
+| P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -211,3 +211,23 @@ authored and verified **offline / statically** like Phase 0.
   Manager/Staff take payment, staff read). Guard green.
 - **Deferred:** refund modeling, payment→order total reconciliation, tax invoice (P3-W4);
   live runtime proof pending a DB.
+
+---
+
+## P3-W4 — Tax invoice ✅
+
+> **Scope:** Thailand VAT 7%, immutable invoices, sequential-per-branch numbering with
+> documented gaps, one per completed sale. RLS-first. Offline / static-reviewed.
+
+- **Objective:** compliant, immutable tax invoices issued from completed sales.
+- **Migrations:** `0018_tax_invoice.sql`.
+- **Tests:** static — VAT 7% + tax point + minor units; tax_invoice & invoice_number_gap
+  append-only (reject_mutation); sequential-per-branch via locked counter; documented gaps
+  (reason enum + record_invoice_gap); one-per-completed-sale (partial unique + status guard);
+  traceability FKs; `issue_tax_invoice` primitive; RLS. Guard updated to 32 tables.
+- **Acceptance:** (1) VAT 7%; (2) immutable; (3) sequential per branch (locked counter);
+  (4) gaps recorded (not strict gapless); (5) one invoice per completed order; (6) trace
+  tax_invoice → sales_order → order_item, and sales_order.invoice_id → tax_invoice. Guard
+  green.
+- **Deferred:** credit-note issuance flow, e-Tax Invoice export (Edge Function), refund
+  linkage; live runtime proof pending a DB. **Phase 3 sales core complete.**

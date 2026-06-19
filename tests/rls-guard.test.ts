@@ -49,6 +49,9 @@ const BUSINESS_TABLES = [
   'sales_order',
   'order_item',
   'payment',
+  'tax_invoice',
+  'invoice_counter',
+  'invoice_number_gap',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
