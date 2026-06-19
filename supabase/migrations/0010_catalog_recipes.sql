@@ -9,14 +9,20 @@
 -- ============================ helpers / guards ============================
 
 -- Read a recipe_version's status past RLS (used by the ingredient guard).
+-- plpgsql (not sql) so the body is validated at call time — recipe_version is created below.
 create or replace function app.recipe_version_status(p_id uuid)
 returns text
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
-  select status from public.recipe_version where id = p_id;
+declare
+  v_status text;
+begin
+  select status into v_status from public.recipe_version where id = p_id;
+  return v_status;
+end;
 $$;
 
 -- BEFORE UPDATE guard: an active version is immutable except an active -> retired

@@ -19,11 +19,11 @@ insert into public.app_user (id, tenant_id, email) values
   ('33333333-3333-3333-3333-333333330005', '11111111-1111-1111-1111-111111111111', 'customer@x');
 
 insert into public.user_branch_role (user_id, branch_id, role_id)
-  select '33333333-3333-3333-3333-333333330001', '22222222-2222-2222-2222-222222222222', id from public.role where key = 'owner'
-  union all select '33333333-3333-3333-3333-333333330002', '22222222-2222-2222-2222-222222222222', id from public.role where key = 'manager'
-  union all select '33333333-3333-3333-3333-333333330003', '22222222-2222-2222-2222-222222222222', id from public.role where key = 'staff'
-  union all select '33333333-3333-3333-3333-333333330004', '22222222-2222-2222-2222-222222222222', id from public.role where key = 'baker'
-  union all select '33333333-3333-3333-3333-333333330005', '22222222-2222-2222-2222-222222222222', id from public.role where key = 'customer';
+  select '33333333-3333-3333-3333-333333330001'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, id from public.role where key = 'owner'
+  union all select '33333333-3333-3333-3333-333333330002'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, id from public.role where key = 'manager'
+  union all select '33333333-3333-3333-3333-333333330003'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, id from public.role where key = 'staff'
+  union all select '33333333-3333-3333-3333-333333330004'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, id from public.role where key = 'baker'
+  union all select '33333333-3333-3333-3333-333333330005'::uuid, '22222222-2222-2222-2222-222222222222'::uuid, id from public.role where key = 'customer';
 
 -- workstations
 insert into public.workstation (id, branch_id, name, type) values

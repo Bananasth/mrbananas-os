@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 
 const { Client } = pg
-const URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
 const here = (p) => fileURLToPath(new URL(p, import.meta.url))
 
 const ID = {
@@ -36,7 +36,7 @@ const ID = {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const newClient = () => new Client({ connectionString: URL })
+const newClient = () => new Client({ connectionString: DB_URL })
 const num = (v) => Number(v)
 function assert(cond, msg) {
   if (!cond) throw new Error(msg)
@@ -96,6 +96,20 @@ async function applyAll() {
     await c.query(readFileSync(`${dir}/${f}`, 'utf8'))
     console.log('ok')
   }
+  // Supabase grants these to authenticated/anon automatically; plain Postgres does not.
+  // RLS still governs ROW access — these are table/function-level privileges only.
+  await c.query(`
+    grant usage on schema public to authenticated, anon, service_role;
+    grant usage on schema app to authenticated, service_role;
+    grant select, insert, update, delete on all tables in schema public to authenticated;
+    grant select on all tables in schema public to anon;
+    grant all privileges on all tables in schema public to service_role;
+    grant execute on all functions in schema public to authenticated, service_role;
+    grant execute on all functions in schema app to authenticated, service_role;
+    -- keep the internal FEFO helper locked down even after the broad grant
+    revoke all on function app.deduct_fefo(uuid, uuid, uuid, numeric, text, text, uuid, uuid) from authenticated, anon;
+  `)
+  console.log('grants applied')
   await c.end()
   await seed()
 }
