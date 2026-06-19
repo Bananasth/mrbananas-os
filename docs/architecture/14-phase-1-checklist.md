@@ -20,7 +20,7 @@ authored and verified **offline / statically** like Phase 0.
 | P2-W1 | Production core (plan, batch, stage, event) | ✅ |
 | P2-W2 | Batch-execution primitives (consume, complete, produce, reconcile) | ✅ |
 | P3-W1 | Sales orders (sales_order + order_item traceability anchor) | ✅ |
-| P3-W2 | Inventory deduction at sale (I1 atomic) | ⬜ |
+| P3-W2 | Inventory deduction at sale (I1 atomic) | ✅ |
 | P3-W3 | Payment | ⬜ |
 | P3-W4 | Tax invoice (Thailand VAT 7%, documented gaps) | ⬜ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
@@ -173,3 +173,23 @@ authored and verified **offline / statically** like Phase 0.
   Staff take orders; Staff/Baker fulfil items; staff read). Guard green.
 - **Deferred (next WPs):** inventory deduction at sale (I1, P3-W2), payment (P3-W3), tax
   invoice (P3-W4); QR customer self-order (QR module); live runtime proof pending a DB.
+
+---
+
+## P3-W2 — Inventory deduction at sale (I1) ✅
+
+> **Scope:** atomic stock deduction primitives. No new tables. Offline / static-reviewed.
+
+- **Objective:** deduct inventory at sale, atomically, with full traceability.
+- **Migrations:** `0016_sale_deduction.sql`.
+- **Tests:** static — `deduct_fifo` (SECURITY DEFINER, revoked from public, FIFO by
+  received_at, FOR UPDATE locking, insufficient-stock raise, sell movements);
+  `fulfil_order_item` (internal authz; bakery deducts finished lots + stamps batch; beverage
+  deducts recipe ingredients; movements ref order_item).
+- **Acceptance:** (1) atomic — FOR UPDATE + qty_on_hand >= 0 backstop; (2) rejects on
+  insufficient stock; (3) FIFO lot consumption; (4) traceability — sell movements ref the
+  order_item, consumed batch stamped onto bakery lines; (5) bakery deducts finished lots;
+  (6) beverages deduct ingredients. No new tables; guard unchanged (28), green.
+- **Note:** sale deduction is **FIFO** (received_at) per the requirement; production consume
+  is **FEFO** (expiry). Flagged for alignment review (FEFO is the perishable default).
+- **Deferred:** payment (P3-W3), tax invoice (P3-W4); live concurrency proof pending a DB.
