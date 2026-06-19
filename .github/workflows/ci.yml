@@ -1,0 +1,48 @@
+name: CI
+
+# Phase 0 W2: continuous integration ONLY — no deployment, no database, no migrations.
+# Runs the same gate locally enforced: typecheck, lint, format-check, tests.
+on:
+  push:
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: CI only needs to read the repository.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (typecheck · lint · format · test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: RLS guard (S2)
+        run: npm run check:rls
+
+      - name: Test
+        run: npm test

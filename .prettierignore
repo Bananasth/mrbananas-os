@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+supabase/.temp/
+package-lock.json
+
+# Non-JS config Prettier has no parser for (handled by .editorconfig)
+*.toml
+
+# Architecture docs are a hand-authored deliverable with intentional table/emoji
+# formatting — Prettier (code formatter) is scoped to app code + the repo README.
+docs/

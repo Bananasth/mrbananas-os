@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build / output
+dist/
+build/
+.next/
+out/
+
+# Test / coverage
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Editor / OS
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Vercel
+.vercel/
+
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
