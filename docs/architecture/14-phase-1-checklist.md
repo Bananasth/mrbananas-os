@@ -15,6 +15,7 @@ authored and verified **offline / statically** like Phase 0.
 | P1-W1 | Inventory subtypes (raw_material, semi_finished, product, unit_conversion) | ✅ |
 | P1-W2 | Branch-specific product (pricing/availability) | ✅ |
 | P1-W3 | Catalog & recipes (recipe, recipe_version, recipe_ingredient) | ✅ |
+| P1-W4 | Suppliers & purchasing (supplier, purchase_order, purchase_order_line) | ✅ |
 | P1-Wx | Live-DB + Auth + runtime integration tests | ⬜ (deferred — needs a database) |
 
 ---
@@ -69,3 +70,21 @@ authored and verified **offline / statically** like Phase 0.
   least-privilege. Guard green.
 - **Deferred:** Manager draft authoring + activation *workflow* (Owner-write for now);
   restrict ingredient `item_id` to raw/semi kinds; live runtime proof pending a DB.
+
+---
+
+## P1-W4 — Suppliers & purchasing ✅
+
+> **Scope:** minimal purchasing — supplier master, PO header, PO lines. No receiving,
+> movements, lots, or ledger (those arrive with the inventory-ledger module). RLS-first.
+> Offline / static-reviewed.
+
+- **Objective:** `supplier` → `purchase_order` (per branch) → `purchase_order_line`
+  (single FK to inventory_item).
+- **Migrations:** `0011_purchasing.sql`.
+- **Tests:** static schema (tenant-safe composite FKs, status enum, qty/cost checks,
+  PO-branch SECURITY DEFINER helper, minimal-scope guard); RLS (Owner full, Manager
+  own-branch, staff read; supplier tenant-read). RLS guard updated to 20 tables.
+- **Acceptance:** branch isolation on PO + lines (lines via `purchase_order_branch()`
+  helper); supplier/PO/line RLS least-privilege. Guard green.
+- **Deferred:** receiving → inventory movements/lots (inventory-ledger module).

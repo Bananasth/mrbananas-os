@@ -33,6 +33,10 @@ const BUSINESS_TABLES = [
   'recipe',
   'recipe_version',
   'recipe_ingredient',
+  // Phase 1 — P1-W4 suppliers & purchasing
+  'supplier',
+  'purchase_order',
+  'purchase_order_line',
 ].sort()
 
 describe('RLS guard — real migrations', () => {
