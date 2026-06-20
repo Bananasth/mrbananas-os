@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
-import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabaseEnv } from './config'
+import { SUPABASE_KEY, SUPABASE_URL, hasSupabaseEnv } from './config'
 
 /**
  * Refresh the auth session on every request (token rotation) and surface the user.
@@ -12,7 +12,7 @@ export async function updateSession(request: NextRequest) {
   // Safe-closed when unconfigured: no user -> protected routes redirect to login.
   if (!hasSupabaseEnv) return { response, user: null }
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
