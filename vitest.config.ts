@@ -26,6 +26,7 @@ export default defineConfig({
         'src/server/services/payments.ts',
         'src/server/services/invoices.ts',
         'src/server/services/fulfillment.ts',
+        'src/server/services/reads.ts',
         'src/server/services/index.ts',
       ],
       thresholds: {

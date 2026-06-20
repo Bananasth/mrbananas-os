@@ -67,6 +67,15 @@ export type RecipeIngredient = {
   updated_at: string
 }
 
+export type InventoryItem = {
+  id: string
+  tenant_id: string
+  item_kind: 'raw' | 'semi_finished' | 'finished'
+  base_unit: string
+  created_at: string
+  updated_at: string
+}
+
 export type StockOnHand = {
   tenant_id: string
   branch_id: string

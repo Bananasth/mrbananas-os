@@ -1,5 +1,13 @@
 import type { LucideIcon } from 'lucide-react'
-import { Boxes, ChefHat, Factory, LayoutDashboard, Settings, ShoppingCart } from 'lucide-react'
+import {
+  Boxes,
+  ChefHat,
+  Factory,
+  LayoutDashboard,
+  Settings,
+  ShoppingCart,
+  SlidersHorizontal,
+} from 'lucide-react'
 
 export type NavItem = {
   href: string
@@ -14,6 +22,7 @@ export const backofficeNav: NavItem[] = [
   { href: '/catalog', label: 'Catalog', labelTh: 'เมนู', icon: Boxes },
   { href: '/inventory', label: 'Inventory', labelTh: 'สต๊อก', icon: Factory },
   { href: '/sales', label: 'Sales', labelTh: 'ยอดขาย', icon: ShoppingCart },
+  { href: '/admin', label: 'Setup', labelTh: 'ตั้งค่าระบบ', icon: SlidersHorizontal },
   { href: '/settings', label: 'Settings', labelTh: 'ตั้งค่า', icon: Settings },
 ]
 
