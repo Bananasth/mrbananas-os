@@ -10,6 +10,7 @@ export default tseslint.config(
       'dist',
       'build',
       '.next',
+      'next-env.d.ts',
       'coverage',
       'supabase/.temp',
       'tests/runtime',
@@ -24,6 +25,11 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
     },
+  },
+  {
+    // Service worker (web worker context) — `self` is the global scope.
+    files: ['public/**/*.js'],
+    languageOptions: { globals: { self: 'readonly' } },
   },
   {
     // Server-only import boundary (S3 groundwork): the service-role admin client must not be
