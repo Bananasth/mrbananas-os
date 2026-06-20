@@ -31,6 +31,7 @@
     "runtime:validate": "node tests/runtime/runtime.mjs validate"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.45.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

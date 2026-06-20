@@ -33,6 +33,7 @@
     "*.config.mjs",
     "*.config.ts",
     "next-env.d.ts",
+    "middleware.ts",
     "scripts",
     "src",
     "tests",
