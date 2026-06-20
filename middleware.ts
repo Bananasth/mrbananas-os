@@ -4,7 +4,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 // Only these prefixes require a session. Everything else (the public marketing
 // site: /, /about, /knowledge, /faq, …) stays public — the matcher below ensures
 // this middleware never even runs on those routes, keeping them fast and cacheable.
-const PRIVATE_PREFIXES = ["/dashboard", "/admin"];
+const PRIVATE_PREFIXES = ["/dashboard", "/admin", "/pos"];
 
 export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
@@ -31,5 +31,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Run only on the auth-relevant routes; never on the public marketing pages.
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/pos/:path*", "/login"],
 };

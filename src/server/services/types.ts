@@ -76,6 +76,25 @@ export type InventoryItem = {
   updated_at: string
 }
 
+export type Workstation = {
+  id: string
+  branch_id: string
+  name: string
+  type: 'beverage' | 'bakery_oven' | 'prep' | 'pos'
+  created_at: string
+  updated_at: string
+}
+
+/** A sellable menu line resolved for POS: product + branch price + its active recipe version. */
+export type MenuItem = {
+  productId: string
+  sku: string
+  name: string
+  category: ProductCategory
+  unitPrice: number
+  recipeVersionId: string
+}
+
 export type StockOnHand = {
   tenant_id: string
   branch_id: string
