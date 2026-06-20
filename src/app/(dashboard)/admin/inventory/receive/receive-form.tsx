@@ -19,7 +19,7 @@ export function ReceiveForm({ branchId, items }: { branchId: string; items: Inve
           </option>
           {items.map((it) => (
             <option key={it.id} value={it.id}>
-              {it.item_kind} · {it.base_unit} · {it.id.slice(0, 8)}
+              {it.name ?? it.item_kind} · {it.base_unit}
             </option>
           ))}
         </select>

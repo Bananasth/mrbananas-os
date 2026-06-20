@@ -5,6 +5,7 @@ import {
   activateVersion,
   addIngredient,
   createDraftVersion,
+  createInventoryItem,
   createProduct,
   createRecipe,
   receiveInventory,
@@ -13,6 +14,22 @@ import {
 } from '@/server/services'
 
 export type FormState = { ok?: boolean; error?: string }
+
+// 0. Inventory items ----------------------------------------------------------------------
+export async function createInventoryItemAction(
+  _prev: FormState,
+  fd: FormData,
+): Promise<FormState> {
+  const res = await createInventoryItem({
+    itemKind: fd.get('itemKind') as 'raw' | 'semi_finished' | 'finished',
+    baseUnit: typeof fd.get('baseUnit') === 'string' ? (fd.get('baseUnit') as string).trim() : '',
+    name: typeof fd.get('name') === 'string' ? (fd.get('name') as string).trim() || undefined : undefined,
+    sku: typeof fd.get('sku') === 'string' ? (fd.get('sku') as string).trim() || undefined : undefined,
+  })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/inventory/items')
+  return { ok: true }
+}
 
 const str = (fd: FormData, k: string): string => {
   const v = fd.get(k)

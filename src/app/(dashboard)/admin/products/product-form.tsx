@@ -34,7 +34,7 @@ export function ProductForm({ items }: { items: InventoryItem[] }) {
           <option value="">— ไม่ผูก / none —</option>
           {items.map((it) => (
             <option key={it.id} value={it.id}>
-              {it.item_kind} · {it.base_unit} · {it.id.slice(0, 8)}
+              {it.name ?? it.item_kind} · {it.base_unit}
             </option>
           ))}
         </select>

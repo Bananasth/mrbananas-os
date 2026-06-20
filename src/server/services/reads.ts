@@ -15,16 +15,34 @@ import type {
 // Same pattern as the rest of the service layer: run as the logged-in user, return a Result.
 const READ_ROLES = ['owner', 'manager', 'staff', 'baker'] as const
 
-/** List the tenant's inventory items (supertype rows: raw / semi_finished / finished). */
+/**
+ * List the tenant's inventory items with their subtype name/sku merged in (raw_material /
+ * semi_finished). Bare finished items keep null name.
+ */
 export async function listInventoryItems(): Promise<Result<InventoryItem[], ServiceError>> {
   const gate = await getServiceContext(READ_ROLES)
   if (!gate.ok) return gate
-  const { data, error } = await gate.value.db
-    .from('inventory_item')
-    .select('*')
-    .order('item_kind', { ascending: true })
-  if (error) return err(serviceError('db', error.message))
-  return ok((data ?? []) as InventoryItem[])
+  const { db } = gate.value
+  const [itemsR, rawR, semiR] = await Promise.all([
+    db.from('inventory_item').select('*').order('item_kind', { ascending: true }),
+    db.from('raw_material').select('id, sku, name'),
+    db.from('semi_finished').select('id, sku, name'),
+  ])
+  if (itemsR.error) return err(serviceError('db', itemsR.error.message))
+
+  const meta = new Map<string, { sku: string; name: string }>()
+  for (const r of [...(rawR.data ?? []), ...(semiR.data ?? [])] as {
+    id: string
+    sku: string
+    name: string
+  }[]) {
+    meta.set(r.id, { sku: r.sku, name: r.name })
+  }
+  const items = ((itemsR.data ?? []) as InventoryItem[]).map((it) => {
+    const m = meta.get(it.id)
+    return { ...it, name: m?.name ?? null, sku: m?.sku ?? null }
+  })
+  return ok(items)
 }
 
 /** List the versions of a recipe, newest version first. */

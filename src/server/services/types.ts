@@ -67,13 +67,18 @@ export type RecipeIngredient = {
   updated_at: string
 }
 
+export type ItemKind = 'raw' | 'semi_finished' | 'finished'
+
 export type InventoryItem = {
   id: string
   tenant_id: string
-  item_kind: 'raw' | 'semi_finished' | 'finished'
+  item_kind: ItemKind
   base_unit: string
   created_at: string
   updated_at: string
+  /** Name/SKU from the raw_material / semi_finished subtype (null for bare finished items). */
+  name?: string | null
+  sku?: string | null
 }
 
 export type Workstation = {

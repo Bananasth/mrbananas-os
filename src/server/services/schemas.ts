@@ -70,6 +70,20 @@ export const StockOnHandSchema = z.object({
 })
 export type StockOnHandInput = z.infer<typeof StockOnHandSchema>
 
+// 4b. Create inventory item (supertype + raw_material / semi_finished subtype) -------------
+export const CreateInventoryItemSchema = z
+  .object({
+    itemKind: z.enum(['raw', 'semi_finished', 'finished']),
+    baseUnit: z.string().min(1).max(32),
+    name: z.string().min(1).max(200).optional(),
+    sku: z.string().min(1).max(64).optional(),
+  })
+  .refine((v) => v.itemKind === 'finished' || (!!v.name && !!v.sku), {
+    message: 'name and sku are required for raw / semi_finished items',
+    path: ['name'],
+  })
+export type CreateInventoryItemInput = z.infer<typeof CreateInventoryItemSchema>
+
 // 5. Receive inventory --------------------------------------------------------------------
 export const ReceiveInventorySchema = z.object({
   branchId: uuid,

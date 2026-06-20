@@ -39,7 +39,9 @@ export default async function StockPage() {
                 const it = itemById.get(s.item_id);
                 return (
                   <tr key={s.item_id} className="border-b border-border/60">
-                    <td className="py-2 pr-3 font-mono text-xs">{s.item_id.slice(0, 8)}</td>
+                    <td className="py-2 pr-3">
+                      {it?.name ?? <span className="font-mono text-xs">{s.item_id.slice(0, 8)}</span>}
+                    </td>
                     <td className="py-2 pr-3">{it ? <Badge tone="neutral">{it.item_kind}</Badge> : "—"}</td>
                     <td className="py-2 tabular-nums">
                       {s.qty_available} {it?.base_unit ?? ""}
