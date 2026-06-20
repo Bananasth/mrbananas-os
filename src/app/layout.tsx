@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { site } from "@/site.config";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { JsonLd } from "@/components/JsonLd";
-import { organizationSchema, websiteSchema } from "@/lib/schema";
 
 export const metadata: Metadata = {
   // metadataBase ทำให้ทุก URL (OG image, canonical) กลายเป็น absolute โดยอัตโนมัติ
@@ -59,13 +55,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang={site.language}>
-      <body className="min-h-screen flex flex-col">
-        {/* Structured data ระดับเว็บ — ฝังในทุกหน้า */}
-        <JsonLd data={[organizationSchema(), websiteSchema()]} />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
