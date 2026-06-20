@@ -28,7 +28,8 @@
     "db:diff": "npx --yes supabase db diff",
     "runtime:apply": "node tests/runtime/runtime.mjs apply",
     "runtime:seed": "node tests/runtime/runtime.mjs seed",
-    "runtime:validate": "node tests/runtime/runtime.mjs validate"
+    "runtime:validate": "node tests/runtime/runtime.mjs validate",
+    "runtime:phase2": "node tests/runtime/phase2-owner.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
