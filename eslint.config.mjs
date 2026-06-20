@@ -4,7 +4,8 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    // tests/runtime is ops tooling that talks to a live DB; not part of the offline gate.
+    // tests/runtime and scripts/*.mjs are ops tooling that talk to a live DB / Supabase
+    // project; they are not part of the offline (typed) gate.
     ignores: [
       'node_modules',
       'dist',
@@ -14,6 +15,7 @@ export default tseslint.config(
       'coverage',
       'supabase/.temp',
       'tests/runtime',
+      'scripts/**/*.mjs',
     ],
   },
   js.configs.recommended,
