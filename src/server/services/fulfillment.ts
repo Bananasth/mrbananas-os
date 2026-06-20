@@ -24,7 +24,7 @@ export async function fulfilOrderItem(
   const parsed = parseInput(FulfilItemSchema, input)
   if (!parsed.ok) return parsed
   const { db } = gate.value
-  const { error } = await db.schema('app').rpc('fulfil_order_item', {
+  const { error } = await db.rpc('fulfil_order_item', {
     p_order_item_id: parsed.value.orderItemId,
     p_employee_id: parsed.value.employeeId ?? null,
   })
@@ -50,7 +50,7 @@ export async function fulfilOrder(
 
   let fulfilled = 0
   for (const id of ids) {
-    const { error: fErr } = await db.schema('app').rpc('fulfil_order_item', {
+    const { error: fErr } = await db.rpc('fulfil_order_item', {
       p_order_item_id: id,
       p_employee_id: parsed.value.employeeId ?? null,
     })

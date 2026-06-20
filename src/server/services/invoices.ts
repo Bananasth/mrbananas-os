@@ -19,7 +19,7 @@ export async function issueTaxInvoice(
   const parsed = parseInput(IssueInvoiceSchema, input)
   if (!parsed.ok) return parsed
   const { db } = gate.value
-  const { data: invoiceId, error } = await db.schema('app').rpc('issue_tax_invoice', {
+  const { data: invoiceId, error } = await db.rpc('issue_tax_invoice', {
     p_order_id: parsed.value.orderId,
     p_sale_occurred_at: parsed.value.saleOccurredAt ?? null,
   })

@@ -79,7 +79,7 @@ export async function receiveInventory(
   const r = parsed.value
   const branchOk = ensureBranch(ctx, r.branchId)
   if (!branchOk.ok) return branchOk
-  const { data, error } = await db.schema('app').rpc('receive_inventory', {
+  const { data, error } = await db.rpc('receive_inventory', {
     p_branch_id: r.branchId,
     p_item_id: r.itemId,
     p_qty: r.qty,
