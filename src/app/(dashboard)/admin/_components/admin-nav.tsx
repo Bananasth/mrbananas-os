@@ -9,6 +9,7 @@ const tabs = [
   { href: "/admin/categories", label: "หมวดหมู่", en: "Categories" },
   { href: "/admin/pricing", label: "ราคาสาขา", en: "Pricing" },
   { href: "/admin/recipes", label: "สูตร", en: "Recipes" },
+  { href: "/admin/modifiers", label: "ตัวเลือก", en: "Modifiers" },
   { href: "/admin/inventory/items", label: "วัตถุดิบ", en: "Items" },
   { href: "/admin/inventory/receive", label: "รับสต๊อก", en: "Receive" },
   { href: "/admin/inventory/stock", label: "สต๊อกคงเหลือ", en: "Stock" },
