@@ -33,9 +33,12 @@ update public.inventory_item i set
                   when 'finished' then 'FG' end)
 where i.name is null or i.sku is null or i.item_type is null;
 
--- 3) per-tenant SKU uniqueness (prevents duplicates; manual override still allowed)
+-- 3) per-tenant uniqueness — SKU and NAME (manual override still allowed). If existing
+--    rows already have duplicate names/SKUs, index creation fails: dedupe those first.
 create unique index if not exists inventory_item_tenant_sku_key
   on public.inventory_item (tenant_id, sku) where sku is not null;
+create unique index if not exists inventory_item_tenant_name_key
+  on public.inventory_item (tenant_id, name) where name is not null;
 
 -- 4) SKU counter — only ever increments, so deleted numbers are NEVER reused
 create table if not exists public.sku_counter (

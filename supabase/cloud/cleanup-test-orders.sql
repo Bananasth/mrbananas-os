@@ -51,19 +51,7 @@ select
 commit;   -- <-- change to ROLLBACK; to abort
 
 -- =============================================================================
--- OPTIONAL stock reversal — run SEPARATELY only if you want test deductions undone.
--- inventory_movement is an IMMUTABLE append-only ledger, so we do NOT delete the
--- 'sell' rows; instead we ADD compensating 'adjust' entries that put the stock back
--- (audit trail preserved). Alternative: just re-receive stock in /admin.
--- -----------------------------------------------------------------------------
--- begin;
---   insert into public.inventory_movement
---     (tenant_id, branch_id, lot_id, item_id, qty_delta, reason, ref_type, ref_id)
---   select tenant_id, branch_id, lot_id, item_id, -qty_delta, 'adjust',
---          'cleanup_reverse_sell', id
---   from public.inventory_movement
---   where tenant_id = '11111111-1111-1111-1111-111111111111'
---     and reason = 'sell' and ref_type = 'order_item';
---   -- review stock_on_hand, then:
--- commit;  -- or ROLLBACK;
+-- STOCK IS LEFT AS-IS (per request): the inventory_movement ledger and the current
+-- stock_on_hand are NOT modified, and NO automatic restoration is performed. If you
+-- ever want stock back, re-receive it in /admin/inventory/receive.
 -- =============================================================================
