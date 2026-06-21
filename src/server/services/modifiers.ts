@@ -154,6 +154,40 @@ export async function listProductModifierGroupIds(
   return ok(((data ?? []) as { modifier_group_id: string }[]).map((r) => r.modifier_group_id))
 }
 
+/** A product's assigned modifier groups with their per-product sort order, sorted. */
+export async function getProductModifierAssignments(
+  productId: string,
+): Promise<Result<{ group: ModifierGroup; sortOrder: number }[], ServiceError>> {
+  const gate = await getServiceContext(READ_ROLES)
+  if (!gate.ok) return gate
+  const { db } = gate.value
+  const { data: links, error } = await db
+    .from('product_modifier_group')
+    .select('modifier_group_id, sort_order')
+    .eq('product_id', productId)
+    .order('sort_order', { ascending: true })
+  if (error) return err(serviceError('db', error.message))
+  const rows = (links ?? []) as { modifier_group_id: string; sort_order: number }[]
+  if (rows.length === 0) return ok([])
+
+  const { data: groups, error: gErr } = await db
+    .from('modifier_group')
+    .select('*')
+    .in(
+      'id',
+      rows.map((r) => r.modifier_group_id),
+    )
+  if (gErr) return err(serviceError('db', gErr.message))
+  const byId = new Map(((groups ?? []) as ModifierGroup[]).map((g) => [g.id, g]))
+
+  const out: { group: ModifierGroup; sortOrder: number }[] = []
+  for (const r of rows) {
+    const group = byId.get(r.modifier_group_id)
+    if (group) out.push({ group, sortOrder: r.sort_order })
+  }
+  return ok(out)
+}
+
 // ---------- writes (owner) ----------
 
 export async function createModifierGroup(

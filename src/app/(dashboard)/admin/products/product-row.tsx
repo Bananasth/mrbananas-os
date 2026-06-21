@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import type { Product } from "@/server/services/types";
 import {
   deleteProductAction,
@@ -74,6 +75,12 @@ export function ProductRow({ product: p }: { product: Product }) {
       </td>
       <td className="py-2">
         <div className="flex items-center justify-end gap-2">
+          <Link
+            href={`/admin/products/${p.id}`}
+            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-bg"
+          >
+            ตัวเลือก · Modifiers
+          </Link>
           <button
             onClick={() => setEditing(true)}
             className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-bg"
