@@ -11,26 +11,33 @@
 
 -- ---------- config tables (tenant-scoped) ----------
 create table if not exists public.modifier_group (
-  id         uuid primary key default gen_random_uuid(),
-  tenant_id  uuid not null references public.tenant (id) on delete restrict,
-  name       text not null,
-  min_select integer not null default 1 check (min_select >= 0),
-  max_select integer not null default 1 check (max_select >= 1),
-  sort       integer not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (id, tenant_id)
+  id             uuid primary key default gen_random_uuid(),
+  tenant_id      uuid not null references public.tenant (id) on delete restrict,
+  name           text not null,
+  description    text,
+  is_required    boolean not null default false,
+  selection_type text not null default 'single' check (selection_type in ('single', 'multiple')),
+  min_select     integer not null default 0 check (min_select >= 0),
+  max_select     integer not null default 1 check (max_select >= 1),
+  sort           integer not null default 0,
+  is_active      boolean not null default true,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  unique (id, tenant_id),
+  check (max_select >= min_select)
 );
 
 create table if not exists public.modifier_option (
-  id         uuid primary key default gen_random_uuid(),
-  tenant_id  uuid not null,
-  group_id   uuid not null,
-  name       text not null,
-  is_default boolean not null default false,
-  sort       integer not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
+  id               uuid primary key default gen_random_uuid(),
+  tenant_id        uuid not null,
+  group_id         uuid not null,
+  name             text not null,
+  price_adjustment bigint not null default 0, -- minor units (satang); may be negative
+  is_default       boolean not null default false,
+  is_active        boolean not null default true,
+  sort             integer not null default 0,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now(),
   foreign key (group_id, tenant_id) references public.modifier_group (id, tenant_id) on delete cascade,
   unique (id, tenant_id)
 );
@@ -45,22 +52,27 @@ create table if not exists public.product_modifier_group (
   foreign key (modifier_group_id, tenant_id) references public.modifier_group (id, tenant_id) on delete cascade
 );
 
--- How an option changes the BoM:
---   set_qty : set target_item_id's quantity to `quantity` (sweetness -> Sugar Syrup)
+-- How an option changes the resolved BoM (all configurable; nothing hardcoded):
+--   add     : add target_item_id at `quantity` (extra shot, toppings)
 --   replace : remove target_item_id, add new_item_id at `quantity` (Milk -> Oat Milk)
+--   set_qty : set target_item_id's quantity to `quantity` (sweetness/ice -> Syrup/Ice)
+--   none    : no stock effect (price-only option, e.g. Temperature hot/iced)
 create table if not exists public.modifier_inventory_effect (
   id                 uuid primary key default gen_random_uuid(),
   tenant_id          uuid not null,
   modifier_option_id uuid not null,
-  effect_type        text not null check (effect_type in ('set_qty', 'replace')),
-  target_item_id     uuid not null,
+  effect_type        text not null check (effect_type in ('add', 'replace', 'set_qty', 'none')),
+  target_item_id     uuid,
   new_item_id        uuid,
-  quantity           numeric not null check (quantity >= 0),
-  unit               text not null,
+  quantity           numeric check (quantity is null or quantity >= 0),
+  unit               text,
   created_at         timestamptz not null default now(),
   foreign key (modifier_option_id, tenant_id) references public.modifier_option (id, tenant_id) on delete cascade,
   foreign key (target_item_id, tenant_id) references public.inventory_item (id, tenant_id) on delete restrict,
   foreign key (new_item_id, tenant_id) references public.inventory_item (id, tenant_id) on delete restrict,
+  -- effect shape constraints
+  check (effect_type = 'none' or target_item_id is not null),
+  check (effect_type = 'none' or quantity is not null),
   check (effect_type <> 'replace' or new_item_id is not null)
 );
 
@@ -70,6 +82,8 @@ create table if not exists public.order_item_modifier (
   branch_id          uuid not null,
   order_item_id      uuid not null,
   modifier_option_id uuid not null,
+  option_name        text not null,           -- snapshot (config may change later)
+  price_adjustment   bigint not null default 0, -- snapshot, minor units
   created_at         timestamptz not null default now(),
   primary key (order_item_id, modifier_option_id),
   foreign key (order_item_id) references public.order_item (id) on delete cascade,
