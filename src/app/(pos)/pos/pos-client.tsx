@@ -2,50 +2,71 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { computeOrderTotals } from "@/server/services/money";
-import type { MenuItem } from "@/server/services/types";
+import type { GroupWithOptions, MenuItem } from "@/server/services/types";
 import { checkout, type CheckoutResult } from "./actions";
+import { ModifierModal, type CartLine } from "./modifier-modal";
 
-const fmt = (n: number) =>
-  (n / 100).toLocaleString("th-TH", { style: "currency", currency: "THB" });
+const fmt = (n: number) => (n / 100).toLocaleString("th-TH", { style: "currency", currency: "THB" });
+const newId = () => globalThis.crypto.randomUUID();
 
 type WS = { id: string; name: string; type: string };
 
 export function PosClient({
   branchId,
   menu,
+  modifiersByProduct,
   workstations,
 }: {
   branchId: string;
   menu: MenuItem[];
+  modifiersByProduct: Record<string, GroupWithOptions[]>;
   workstations: WS[];
 }) {
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [lines, setLines] = useState<CartLine[]>([]);
+  const [modalItem, setModalItem] = useState<MenuItem | null>(null);
   const [wsId, setWsId] = useState(
     workstations.find((w) => w.type === "pos")?.id ?? workstations[0]?.id ?? "",
   );
   const [pending, start] = useTransition();
   const [receipt, setReceipt] = useState<CheckoutResult | null>(null);
 
-  const lines = useMemo(
-    () => menu.filter((m) => (cart[m.productId] ?? 0) > 0).map((m) => ({ ...m, qty: cart[m.productId] ?? 0 })),
-    [cart, menu],
-  );
   const totals = useMemo(
     () => computeOrderTotals(lines.map((l) => ({ unitPrice: l.unitPrice, qty: l.qty }))),
     [lines],
   );
 
-  const add = (id: string) => setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
-  const sub = (id: string) =>
-    setCart((c) => {
-      const n = (c[id] ?? 0) - 1;
-      const next = { ...c };
-      if (n <= 0) delete next[id];
-      else next[id] = n;
-      return next;
-    });
+  const onMenuClick = (m: MenuItem) => {
+    const groups = modifiersByProduct[m.productId] ?? [];
+    if (groups.length > 0) {
+      setModalItem(m);
+    } else {
+      setLines((prev) => [
+        ...prev,
+        {
+          lineId: newId(),
+          productId: m.productId,
+          name: m.name,
+          recipeVersionId: m.recipeVersionId,
+          qty: 1,
+          unitPrice: m.unitPrice,
+          optionIds: [],
+          optionLabels: [],
+        },
+      ]);
+    }
+  };
+
+  const incQty = (id: string, d: number) =>
+    setLines((prev) =>
+      prev.flatMap((l) => {
+        if (l.lineId !== id) return [l];
+        const qty = l.qty + d;
+        return qty <= 0 ? [] : [{ ...l, qty }];
+      }),
+    );
+
   const reset = () => {
-    setCart({});
+    setLines([]);
     setReceipt(null);
   };
 
@@ -58,12 +79,12 @@ export function PosClient({
         lines: lines.map((l) => ({
           productId: l.productId,
           recipeVersionId: l.recipeVersionId,
-          unitPrice: l.unitPrice,
           qty: l.qty,
+          optionIds: l.optionIds,
         })),
       });
       setReceipt(res);
-      if (res.ok) setCart({});
+      if (res.ok) setLines([]);
     });
   };
 
@@ -91,22 +112,27 @@ export function PosClient({
       <div>
         {menu.length === 0 ? (
           <p className="text-sm text-muted">
-            ยังไม่มีสินค้าพร้อมขาย — ตั้งราคาและเปิดสูตรใน Setup ก่อน · No sellable products yet (set a price +
-            activate a recipe in Setup).
+            ยังไม่มีสินค้าพร้อมขาย — ตั้งราคาและเปิดสูตรใน Setup ก่อน · No sellable products yet.
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {menu.map((m) => (
-              <button
-                key={m.productId}
-                onClick={() => add(m.productId)}
-                className="rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-accent"
-              >
-                <p className="font-medium leading-tight">{m.name}</p>
-                <p className="text-xs text-muted">{m.sku}</p>
-                <p className="mt-2 font-bold tabular-nums">{fmt(m.unitPrice)}</p>
-              </button>
-            ))}
+            {menu.map((m) => {
+              const hasMods = (modifiersByProduct[m.productId] ?? []).length > 0;
+              return (
+                <button
+                  key={m.productId}
+                  onClick={() => onMenuClick(m)}
+                  className="rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-accent"
+                >
+                  <p className="font-medium leading-tight">{m.name}</p>
+                  <p className="text-xs text-muted">
+                    {m.sku}
+                    {hasMods ? " · ตัวเลือก" : ""}
+                  </p>
+                  <p className="mt-2 font-bold tabular-nums">{fmt(m.unitPrice)}</p>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -118,18 +144,23 @@ export function PosClient({
             <p className="text-sm text-muted">ยังไม่มีรายการ · empty</p>
           ) : (
             lines.map((l) => (
-              <div key={l.productId} className="flex items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 flex-1 truncate">{l.name}</span>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => sub(l.productId)} className="h-7 w-7 rounded border border-border">
-                    −
-                  </button>
-                  <span className="w-6 text-center tabular-nums">{l.qty}</span>
-                  <button onClick={() => add(l.productId)} className="h-7 w-7 rounded border border-border">
-                    +
-                  </button>
+              <div key={l.lineId} className="border-b border-border/60 pb-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1 truncate font-medium">{l.name}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => incQty(l.lineId, -1)} className="h-7 w-7 rounded border border-border">
+                      −
+                    </button>
+                    <span className="w-6 text-center tabular-nums">{l.qty}</span>
+                    <button onClick={() => incQty(l.lineId, 1)} className="h-7 w-7 rounded border border-border">
+                      +
+                    </button>
+                  </div>
+                  <span className="w-20 text-right tabular-nums">{fmt(l.unitPrice * l.qty)}</span>
                 </div>
-                <span className="w-20 text-right tabular-nums">{fmt(l.unitPrice * l.qty)}</span>
+                {l.optionLabels.length > 0 ? (
+                  <p className="mt-0.5 text-xs text-muted">{l.optionLabels.map((o) => o.name).join(", ")}</p>
+                ) : null}
               </div>
             ))
           )}
@@ -183,6 +214,18 @@ export function PosClient({
           {pending ? "กำลังชำระ…" : `รับเงินสด · Charge cash ${fmt(totals.total)}`}
         </button>
       </div>
+
+      {modalItem ? (
+        <ModifierModal
+          item={modalItem}
+          groups={modifiersByProduct[modalItem.productId] ?? []}
+          onAdd={(line) => {
+            setLines((prev) => [...prev, line]);
+            setModalItem(null);
+          }}
+          onClose={() => setModalItem(null)}
+        />
+      ) : null}
     </div>
   );
 }

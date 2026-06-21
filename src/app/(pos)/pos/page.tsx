@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guard";
-import { getMenu, listWorkstations } from "@/server/services";
+import { getMenu, getProductModifiers, listWorkstations } from "@/server/services";
+import type { GroupWithOptions } from "@/server/services/types";
 import { PosClient } from "./pos-client";
 
 export const metadata: Metadata = { title: "POS", robots: { index: false } };
@@ -21,10 +22,19 @@ export default async function PosPage() {
     );
   }
 
+  // Modifier groups per menu product (active groups/options). Empty array = no modifiers.
+  const modifierResults = await Promise.all(menu.value.map((m) => getProductModifiers(m.productId)));
+  const modifiersByProduct: Record<string, GroupWithOptions[]> = {};
+  menu.value.forEach((m, i) => {
+    const r = modifierResults[i];
+    modifiersByProduct[m.productId] = r && r.ok ? r.value : [];
+  });
+
   return (
     <PosClient
       branchId={branchId}
       menu={menu.value}
+      modifiersByProduct={modifiersByProduct}
       workstations={(workstations.ok ? workstations.value : []).map((w) => ({
         id: w.id,
         name: w.name,
