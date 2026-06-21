@@ -11,6 +11,7 @@ import { activateVersionAction } from "../../actions";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "../../_components/ui";
 import { ServiceErrorCard } from "../../_components/service-error";
 import { DraftVersionForm, IngredientForm } from "./version-forms";
+import { VersionActions } from "./version-actions";
 
 export const metadata: Metadata = { title: "Recipe versions · Setup", robots: { index: false } };
 
@@ -85,6 +86,7 @@ export default async function RecipeVersionsPage({
                       </button>
                     </form>
                   ) : null}
+                  <VersionActions version={v} recipeId={recipeId} />
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">

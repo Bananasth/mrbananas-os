@@ -78,6 +78,29 @@ export type AddIngredientInput = z.infer<typeof AddIngredientSchema>
 export const ActivateVersionSchema = z.object({ recipeVersionId: uuid })
 export type ActivateVersionInput = z.infer<typeof ActivateVersionSchema>
 
+export const UpdateRecipeSchema = z.object({ id: uuid, name: z.string().min(1).max(200) })
+export type UpdateRecipeInput = z.infer<typeof UpdateRecipeSchema>
+
+export const DeleteRecipeSchema = z.object({ id: uuid })
+export type DeleteRecipeInput = z.infer<typeof DeleteRecipeSchema>
+
+export const UpdateRecipeVersionSchema = z
+  .object({
+    id: uuid,
+    shelfLifeHours: z.number().int().nonnegative().nullable().optional(),
+    yieldQty: positiveQty.nullable().optional(),
+  })
+  .refine((v) => v.shelfLifeHours !== undefined || v.yieldQty !== undefined, {
+    message: 'nothing to update',
+  })
+export type UpdateRecipeVersionInput = z.infer<typeof UpdateRecipeVersionSchema>
+
+export const RetireVersionSchema = z.object({ id: uuid })
+export type RetireVersionInput = z.infer<typeof RetireVersionSchema>
+
+export const DeleteRecipeVersionSchema = z.object({ id: uuid })
+export type DeleteRecipeVersionInput = z.infer<typeof DeleteRecipeVersionSchema>
+
 // 4. Inventory stock on hand --------------------------------------------------------------
 export const StockOnHandSchema = z.object({
   branchId: uuid,

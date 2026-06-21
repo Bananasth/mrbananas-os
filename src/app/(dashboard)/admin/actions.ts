@@ -10,10 +10,15 @@ import {
   createRecipe,
   deleteInventoryItem,
   deleteProduct,
+  deleteRecipe,
+  deleteRecipeVersion,
   receiveInventory,
+  retireRecipeVersion,
   setProductActive,
   updateInventoryItem,
   updateProduct,
+  updateRecipe,
+  updateRecipeVersion,
   upsertBranchPrice,
 } from '@/server/services'
 
@@ -166,6 +171,56 @@ export async function activateVersionAction(fd: FormData): Promise<void> {
   await activateVersion({ recipeVersionId: str(fd, 'recipeVersionId') })
   const recipeId = str(fd, 'recipeId')
   if (recipeId) revalidatePath(`/admin/recipes/${recipeId}`)
+}
+
+export async function updateRecipeAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const res = await updateRecipe({ id: str(fd, 'id'), name: str(fd, 'name') })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/recipes')
+  return { ok: true }
+}
+
+export async function deleteRecipeAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const res = await deleteRecipe({ id: str(fd, 'id') })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/recipes')
+  return { ok: true }
+}
+
+export async function updateRecipeVersionAction(
+  _prev: FormState,
+  fd: FormData,
+): Promise<FormState> {
+  const shelf = optStr(fd, 'shelfLifeHours')
+  const y = optStr(fd, 'yieldQty')
+  const res = await updateRecipeVersion({
+    id: str(fd, 'id'),
+    shelfLifeHours: shelf === null ? null : Number.parseInt(shelf, 10),
+    yieldQty: y === null ? null : Number.parseFloat(y),
+  })
+  if (!res.ok) return { error: res.error.message }
+  const recipeId = str(fd, 'recipeId')
+  if (recipeId) revalidatePath(`/admin/recipes/${recipeId}`)
+  return { ok: true }
+}
+
+export async function retireVersionAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const res = await retireRecipeVersion({ id: str(fd, 'id') })
+  if (!res.ok) return { error: res.error.message }
+  const recipeId = str(fd, 'recipeId')
+  if (recipeId) revalidatePath(`/admin/recipes/${recipeId}`)
+  return { ok: true }
+}
+
+export async function deleteRecipeVersionAction(
+  _prev: FormState,
+  fd: FormData,
+): Promise<FormState> {
+  const res = await deleteRecipeVersion({ id: str(fd, 'id') })
+  if (!res.ok) return { error: res.error.message }
+  const recipeId = str(fd, 'recipeId')
+  if (recipeId) revalidatePath(`/admin/recipes/${recipeId}`)
+  return { ok: true }
 }
 
 // 4/5. Inventory receive ------------------------------------------------------------------
