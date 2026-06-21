@@ -9,7 +9,7 @@ import {
   createProduct,
   createRecipe,
   deleteInventoryItem,
-  generateSku,
+  peekNextSku,
   deleteProduct,
   deleteRecipe,
   deleteRecipeVersion,
@@ -35,19 +35,20 @@ export async function createInventoryItemAction(
   const res = await createInventoryItem({
     itemType: str(fd, 'itemType') as ItemType,
     name: str(fd, 'name'),
-    sku: str(fd, 'sku'),
     baseUnit: str(fd, 'baseUnit'),
+    autoSku: str(fd, 'autoSku') === 'true',
+    sku: optStr(fd, 'sku') ?? undefined,
   })
   if (!res.ok) return { error: res.error.message }
   revalidatePath('/admin/inventory/items')
   return { ok: true }
 }
 
-/** Generate the next SKU for a type — called directly from the item form. */
-export async function generateSkuAction(
+/** Preview the next SKU for a type — does NOT consume a number. Called from the item form. */
+export async function peekSkuAction(
   itemType: ItemType,
 ): Promise<{ ok: true; sku: string } | { ok: false; error: string }> {
-  const res = await generateSku({ itemType })
+  const res = await peekNextSku({ itemType })
   if (!res.ok) return { ok: false, error: res.error.message }
   return { ok: true, sku: res.value.sku }
 }

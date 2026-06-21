@@ -48,7 +48,11 @@ function dupMessage(error: { code?: string; message?: string }): ServiceError | 
   return serviceError('conflict', 'ข้อมูลซ้ำ · Duplicate name or SKU.')
 }
 
-/** Create an inventory item (owner only): item_type + name + sku on the supertype. */
+/**
+ * Create an inventory item (owner only) via the atomic app.create_inventory_item: when
+ * autoSku is true it allocates the next SKU and inserts in ONE transaction, so a failed
+ * insert never skips a SKU number. Manual SKU is used as-is.
+ */
 export async function createInventoryItem(
   input: CreateInventoryItemInput,
 ): Promise<Result<InventoryItem, ServiceError>> {
@@ -56,35 +60,37 @@ export async function createInventoryItem(
   if (!gate.ok) return gate
   const parsed = parseInput(CreateInventoryItemSchema, input)
   if (!parsed.ok) return parsed
-  const { ctx, db } = gate.value
   const v = parsed.value
-  const { data, error } = await db
-    .from('inventory_item')
-    .insert({
-      tenant_id: ctx.tenantId,
-      item_type: v.itemType,
-      item_kind: KIND_BY_TYPE[v.itemType] ?? null,
-      base_unit: v.baseUnit,
-      name: v.name,
-      sku: v.sku,
-    })
-    .select('*')
-    .single()
+  const { data, error } = await gate.value.db.rpc('create_inventory_item', {
+    p_item_type: v.itemType,
+    p_name: v.name,
+    p_base_unit: v.baseUnit,
+    p_auto_sku: v.autoSku,
+    p_sku: v.autoSku ? null : (v.sku ?? null),
+  })
   if (error) return err(dupMessage(error) ?? serviceError('db', error.message))
   return ok(data as InventoryItem)
 }
 
-/** Generate the next available SKU for an item type (e.g. RM0001). Never reuses numbers. */
-export async function generateSku(
+/**
+ * Preview the next SKU for an item type WITHOUT consuming it (plain read of the counter).
+ * Calling it repeatedly returns the same value; the number is only allocated at create.
+ */
+export async function peekNextSku(
   input: GenerateSkuInput,
 ): Promise<Result<{ sku: string }, ServiceError>> {
   const gate = await getServiceContext(['owner'])
   if (!gate.ok) return gate
   const parsed = parseInput(GenerateSkuSchema, input)
   if (!parsed.ok) return parsed
-  const { data, error } = await gate.value.db.rpc('next_sku', { p_prefix: parsed.value.itemType })
+  const { data, error } = await gate.value.db
+    .from('sku_counter')
+    .select('next_no')
+    .eq('prefix', parsed.value.itemType)
+    .maybeSingle()
   if (error) return err(serviceError('db', error.message))
-  return ok({ sku: data as string })
+  const nextNo = (data as { next_no: number } | null)?.next_no ?? 1
+  return ok({ sku: `${parsed.value.itemType}${String(nextNo).padStart(4, '0')}` })
 }
 
 /** Stock on hand for a branch (optionally one item), from the RLS-scoped stock_on_hand view. */

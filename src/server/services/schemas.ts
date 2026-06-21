@@ -111,12 +111,19 @@ export type StockOnHandInput = z.infer<typeof StockOnHandSchema>
 // 4b. Create inventory item (item_type + canonical name/sku on inventory_item) ------------
 const itemType = z.enum(['RM', 'SF', 'PK', 'FG', 'MD', 'SV'])
 
-export const CreateInventoryItemSchema = z.object({
-  itemType,
-  name: z.string().min(1).max(200),
-  sku: z.string().min(1).max(64),
-  baseUnit: z.string().min(1).max(32),
-})
+export const CreateInventoryItemSchema = z
+  .object({
+    itemType,
+    name: z.string().min(1).max(200),
+    baseUnit: z.string().min(1).max(32),
+    /** When true the SKU is allocated server-side at create; sku is ignored. */
+    autoSku: z.boolean().default(false),
+    sku: z.string().min(1).max(64).optional(),
+  })
+  .refine((v) => v.autoSku || !!v.sku, {
+    message: 'SKU is required (or enable auto)',
+    path: ['sku'],
+  })
 export type CreateInventoryItemInput = z.infer<typeof CreateInventoryItemSchema>
 
 export const GenerateSkuSchema = z.object({ itemType })
