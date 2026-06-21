@@ -2,8 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import {
+  createModifierEffect,
   createModifierGroup,
   createModifierOption,
+  deleteModifierEffect,
   deleteModifierGroup,
   deleteModifierOption,
   updateModifierGroup,
@@ -119,4 +121,29 @@ export async function deleteOptionAction(_p: FormState, fd: FormData): Promise<F
   if (!res.ok) return { error: res.error.message }
   revalidatePath(`/admin/modifiers/${str(fd, 'groupId')}`)
   return { ok: true }
+}
+
+// ---- inventory effects (per option) ----
+type EffectType = 'add' | 'replace' | 'set_qty' | 'none'
+
+export async function createEffectAction(_p: FormState, fd: FormData): Promise<FormState> {
+  const groupId = str(fd, 'groupId')
+  const optionId = str(fd, 'optionId')
+  const qty = str(fd, 'quantity')
+  const res = await createModifierEffect({
+    modifierOptionId: optionId,
+    effectType: (str(fd, 'effectType') || 'set_qty') as EffectType,
+    targetItemId: optStr(fd, 'targetItemId'),
+    newItemId: optStr(fd, 'newItemId'),
+    quantity: qty === '' ? null : Number.parseFloat(qty),
+    unit: optStr(fd, 'unit'),
+  })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath(`/admin/modifiers/${groupId}/${optionId}`)
+  return { ok: true }
+}
+
+export async function deleteEffectAction(fd: FormData): Promise<void> {
+  await deleteModifierEffect({ id: str(fd, 'id') })
+  revalidatePath(`/admin/modifiers/${str(fd, 'groupId')}/${str(fd, 'optionId')}`)
 }

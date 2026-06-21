@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import type { ModifierOption } from "@/server/services/types";
 import { deleteOptionAction, toggleOptionActiveAction, updateOptionAction, type FormState } from "../actions";
 import { fieldClass } from "../../_components/forms";
@@ -65,6 +66,9 @@ export function OptionRow({ option: o, groupId }: { option: ModifierOption; grou
       </td>
       <td className="py-2">
         <div className="flex items-center justify-end gap-2">
+          <Link href={`/admin/modifiers/${groupId}/${o.id}`} className={btn}>
+            ผลต่อสต๊อก · Effects
+          </Link>
           <button onClick={() => setEditing(true)} className={btn}>
             แก้ไข · Edit
           </button>
