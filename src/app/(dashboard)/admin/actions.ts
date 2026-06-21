@@ -9,9 +9,11 @@ import {
   createProduct,
   createRecipe,
   deleteInventoryItem,
+  deleteProduct,
   receiveInventory,
   setProductActive,
   updateInventoryItem,
+  updateProduct,
   upsertBranchPrice,
 } from '@/server/services'
 
@@ -88,6 +90,25 @@ export async function toggleProductAction(fd: FormData): Promise<void> {
     isActive: str(fd, 'isActive') === 'true',
   })
   revalidatePath('/admin/products')
+}
+
+export async function updateProductAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const res = await updateProduct({
+    id: str(fd, 'id'),
+    name: optStr(fd, 'name') ?? undefined,
+    sku: optStr(fd, 'sku') ?? undefined,
+    category: (optStr(fd, 'category') as 'beverage' | 'bakery' | null) ?? undefined,
+  })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/products')
+  return { ok: true }
+}
+
+export async function deleteProductAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  const res = await deleteProduct({ id: str(fd, 'id') })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/products')
+  return { ok: true }
 }
 
 // 2. Branch pricing -----------------------------------------------------------------------

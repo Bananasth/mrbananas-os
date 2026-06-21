@@ -27,6 +27,21 @@ export const SetProductActiveSchema = z.object({
 })
 export type SetProductActiveInput = z.infer<typeof SetProductActiveSchema>
 
+export const UpdateProductSchema = z
+  .object({
+    id: uuid,
+    name: z.string().min(1).max(200).optional(),
+    sku: z.string().min(1).max(64).optional(),
+    category: z.enum(['beverage', 'bakery']).optional(),
+  })
+  .refine((v) => v.name !== undefined || v.sku !== undefined || v.category !== undefined, {
+    message: 'nothing to update',
+  })
+export type UpdateProductInput = z.infer<typeof UpdateProductSchema>
+
+export const DeleteProductSchema = z.object({ id: uuid })
+export type DeleteProductInput = z.infer<typeof DeleteProductSchema>
+
 // 2. Branch product pricing ---------------------------------------------------------------
 export const UpsertBranchPriceSchema = z.object({
   branchId: uuid,

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { listInventoryItems, listProducts } from "@/server/services";
-import { toggleProductAction } from "../actions";
-import { Badge, Card, CardContent, CardHeader, CardTitle, td, th } from "../_components/ui";
+import { Card, CardContent, CardHeader, CardTitle, th } from "../_components/ui";
 import { ServiceErrorCard } from "../_components/service-error";
 import { ProductForm } from "./product-form";
+import { ProductRow } from "./product-row";
 
 export const metadata: Metadata = { title: "Products · Setup", robots: { index: false } };
 
@@ -38,38 +38,12 @@ export default async function ProductsPage() {
                   <th className={th}>หมวด · Category</th>
                   <th className={th}>ประเภท · Type</th>
                   <th className={th}>สถานะ · Status</th>
-                  <th className="py-2" />
+                  <th className="py-2 text-right font-medium">จัดการ · Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.value.map((p) => (
-                  <tr key={p.id} className="border-b border-border/60">
-                    <td className="py-2 pr-3 font-mono text-xs">{p.sku}</td>
-                    <td className={td}>{p.name}</td>
-                    <td className={td}>
-                      <Badge tone="accent">{p.category}</Badge>
-                    </td>
-                    <td className="py-2 pr-3 text-muted">{p.type}</td>
-                    <td className={td}>
-                      {p.is_active ? (
-                        <Badge tone="success">active</Badge>
-                      ) : (
-                        <Badge tone="danger">inactive</Badge>
-                      )}
-                    </td>
-                    <td className="py-2 text-right">
-                      <form action={toggleProductAction}>
-                        <input type="hidden" name="productId" value={p.id} />
-                        <input type="hidden" name="isActive" value={p.is_active ? "false" : "true"} />
-                        <button
-                          type="submit"
-                          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-bg"
-                        >
-                          {p.is_active ? "ปิดการขาย" : "เปิดการขาย"}
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
+                  <ProductRow key={p.id} product={p} />
                 ))}
               </tbody>
             </table>
