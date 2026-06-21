@@ -13,6 +13,8 @@ const tabs = [
   { href: "/admin/inventory/items", label: "วัตถุดิบ", en: "Items" },
   { href: "/admin/inventory/receive", label: "รับสต๊อก", en: "Receive" },
   { href: "/admin/inventory/stock", label: "สต๊อกคงเหลือ", en: "Stock" },
+  { href: "/admin/inventory/adjust", label: "ปรับสต๊อก", en: "Adjust" },
+  { href: "/admin/inventory/movements", label: "ประวัติ", en: "Movements" },
 ];
 
 export function AdminNav() {

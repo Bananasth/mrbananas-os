@@ -92,6 +92,61 @@ export type InventoryItem = {
   updated_at: string
 }
 
+export type InventoryLot = {
+  id: string
+  tenant_id: string
+  branch_id: string
+  item_id: string
+  batch_id: string | null
+  qty_on_hand: number
+  unit: string
+  received_at: string
+  expires_at: string | null
+  status: 'available' | 'quarantined' | 'expired' | 'depleted'
+  created_at: string
+  updated_at: string
+}
+
+export type MovementReason =
+  | 'receive'
+  | 'consume'
+  | 'produce'
+  | 'sell'
+  | 'waste'
+  | 'adjust'
+  | 'transfer'
+
+export type StockMovement = {
+  id: string
+  tenant_id: string
+  branch_id: string
+  lot_id: string
+  item_id: string
+  qty_delta: number
+  reason: MovementReason
+  ref_type: string | null
+  ref_id: string | null
+  employee_id: string | null
+  occurred_at: string
+  created_at: string
+}
+
+export type StockAdjustment = {
+  id: string
+  tenant_id: string
+  branch_id: string
+  lot_id: string
+  item_id: string
+  movement_id: string
+  kind: 'adjust' | 'waste'
+  before_qty: number
+  after_qty: number
+  difference: number
+  reason: string
+  adjusted_by: string | null
+  created_at: string
+}
+
 export type Workstation = {
   id: string
   branch_id: string

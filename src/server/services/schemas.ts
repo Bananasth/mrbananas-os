@@ -284,3 +284,21 @@ export const UnassignProductModifierGroupSchema = z.object({
   modifierGroupId: uuid,
 })
 export type UnassignProductModifierGroupInput = z.infer<typeof UnassignProductModifierGroupSchema>
+
+// 11. Stock adjustment / waste / movement history -----------------------------------------
+export const AdjustStockSchema = z.object({
+  lotId: uuid,
+  newQty: z.number().nonnegative(),
+  reason: z.string().min(1).max(300),
+})
+export type AdjustStockInput = z.infer<typeof AdjustStockSchema>
+
+export const RecordWasteSchema = z.object({
+  lotId: uuid,
+  qty: positiveQty,
+  reason: z.string().min(1).max(300),
+})
+export type RecordWasteInput = z.infer<typeof RecordWasteSchema>
+
+export const MovementsQuerySchema = z.object({ branchId: uuid, itemId: uuid.optional() })
+export type MovementsQueryInput = z.infer<typeof MovementsQuerySchema>

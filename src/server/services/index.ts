@@ -25,3 +25,4 @@ export * from './modifier-bom' // pure resolved-BoM engine
 export * from './unit-convert' // unit conversion (receive -> base_unit)
 export * from './modifiers' // POS modifier system (config CRUD + product modifiers)
 export * from './order-modifiers' // checkout-time option resolution + persistence
+export * from './stock-ledger' // stock adjustment / waste + movement history
