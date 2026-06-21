@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guard";
-import { getStockOnHand, listInventoryItems } from "@/server/services";
+import { formatStock, getStockOnHand, listInventoryItems } from "@/server/services";
 import { Badge, Card, CardContent, CardHeader, CardTitle, th } from "../../_components/ui";
 import { ServiceErrorCard } from "../../_components/service-error";
 
@@ -30,7 +30,7 @@ export default async function StockPage() {
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
                 <th className={th}>วัตถุดิบ · Item</th>
-                <th className={th}>ชนิด · Kind</th>
+                <th className={th}>ประเภท · Type</th>
                 <th className="py-2 font-medium">คงเหลือ · Available</th>
               </tr>
             </thead>
@@ -42,9 +42,11 @@ export default async function StockPage() {
                     <td className="py-2 pr-3">
                       {it?.name ?? <span className="font-mono text-xs">{s.item_id.slice(0, 8)}</span>}
                     </td>
-                    <td className="py-2 pr-3">{it ? <Badge tone="neutral">{it.item_kind}</Badge> : "—"}</td>
+                    <td className="py-2 pr-3">
+                      {it ? <Badge tone="neutral">{it.item_type ?? it.item_kind ?? "—"}</Badge> : "—"}
+                    </td>
                     <td className="py-2 tabular-nums">
-                      {s.qty_available} {it?.base_unit ?? ""}
+                      {it ? formatStock(s.qty_available, it.base_unit) : s.qty_available}
                     </td>
                   </tr>
                 );

@@ -16,6 +16,7 @@ import {
   type UpdateInventoryItemInput,
 } from './schemas'
 import type { InventoryItem, StockOnHand } from './types'
+import { convertUnit } from './unit-convert'
 
 // Tables whose rows pin an inventory_item; deleting a referenced item is blocked (the DB also
 // enforces ON DELETE RESTRICT on most of these — this gives a friendly message first).
@@ -109,9 +110,9 @@ export async function getStockOnHand(input: unknown): Promise<Result<StockOnHand
 }
 
 /**
- * Receive stock into a lot (owner or manager) via the guarded app.receive_inventory
- * primitive — appends a 'receive' movement and reconciles the lot cache atomically.
- * Returns the new lot id.
+ * Receive stock (owner or manager). The input unit is CONVERTED to the item's base_unit and
+ * stored in base_unit (incompatible units are rejected with a friendly error). Then the
+ * guarded app.receive_inventory primitive appends a 'receive' movement + reconciles the lot.
  */
 export async function receiveInventory(
   input: ReceiveInventoryInput,
@@ -124,11 +125,25 @@ export async function receiveInventory(
   const r = parsed.value
   const branchOk = ensureBranch(ctx, r.branchId)
   if (!branchOk.ok) return branchOk
+
+  // Convert the input unit to the item's base_unit; stock is always stored in base_unit.
+  const { data: item, error: itemErr } = await db
+    .from('inventory_item')
+    .select('base_unit')
+    .eq('id', r.itemId)
+    .eq('tenant_id', ctx.tenantId)
+    .maybeSingle()
+  if (itemErr) return err(serviceError('db', itemErr.message))
+  if (!item) return err(serviceError('not_found', 'ไม่พบวัตถุดิบ · Item not found.'))
+  const baseUnit = (item as { base_unit: string }).base_unit
+  const conv = convertUnit(r.qty, r.unit, baseUnit)
+  if (!conv.ok) return err(serviceError('validation', conv.error))
+
   const { data, error } = await db.rpc('receive_inventory', {
     p_branch_id: r.branchId,
     p_item_id: r.itemId,
-    p_qty: r.qty,
-    p_unit: r.unit,
+    p_qty: conv.value,
+    p_unit: baseUnit,
     p_expires_at: r.expiresAt ?? null,
     p_employee_id: r.employeeId ?? null,
     p_ref_type: r.refType ?? null,
