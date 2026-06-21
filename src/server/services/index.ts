@@ -21,3 +21,5 @@ export * from './payments' // 7. Cash payment
 export * from './invoices' // 8. Tax invoice issuance
 export * from './fulfillment' // 9. Order fulfillment / FEFO deduction
 export * from './reads' // admin read helpers (inventory items, recipe versions/ingredients)
+export * from './modifier-bom' // pure resolved-BoM engine
+export * from './modifiers' // POS modifier system (config CRUD + product modifiers)

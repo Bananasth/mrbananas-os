@@ -183,5 +183,65 @@ export type CreatedOrder = {
   items: OrderItem[]
 }
 
+// --- Modifiers (POS modifier system) ----------------------------------------------------
+export type ModifierSelectionType = 'single' | 'multiple'
+export type ModifierDisplayType = 'radio' | 'checkbox' | 'button' | 'dropdown'
+export type ModifierEffectType = 'add' | 'replace' | 'set_qty' | 'none'
+
+export type ModifierGroup = {
+  id: string
+  tenant_id: string
+  name: string
+  description: string | null
+  is_required: boolean
+  selection_type: ModifierSelectionType
+  display_type: ModifierDisplayType
+  min_select: number
+  max_select: number
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type ModifierInventoryEffect = {
+  id: string
+  tenant_id: string
+  modifier_option_id: string
+  effect_type: ModifierEffectType
+  target_item_id: string | null
+  new_item_id: string | null
+  quantity: number | null
+  unit: string | null
+  created_at: string
+}
+
+export type ModifierOption = {
+  id: string
+  tenant_id: string
+  group_id: string
+  name: string
+  code: string | null
+  image_url: string | null
+  price_adjustment: number
+  is_default: boolean
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type ProductModifierGroup = {
+  tenant_id: string
+  product_id: string
+  modifier_group_id: string
+  sort_order: number
+}
+
+/** Option with its inventory effects (POS / admin composite). */
+export type OptionWithEffects = ModifierOption & { effects: ModifierInventoryEffect[] }
+/** Group with its (active) options — the shape POS renders + resolves. */
+export type GroupWithOptions = ModifierGroup & { options: OptionWithEffects[] }
+
 /** Re-export for convenience at call sites. */
 export type { RoleKey }

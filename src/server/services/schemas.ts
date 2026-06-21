@@ -202,3 +202,72 @@ export const FulfilOrderSchema = z.object({
   employeeId: uuid.nullable().optional(),
 })
 export type FulfilOrderInput = z.infer<typeof FulfilOrderSchema>
+
+// 10. Modifiers ---------------------------------------------------------------------------
+export const CreateModifierGroupSchema = z.object({
+  name: z.string().min(1).max(120),
+  description: z.string().max(500).nullable().optional(),
+  isRequired: z.boolean().optional(),
+  selectionType: z.enum(['single', 'multiple']).optional(),
+  displayType: z.enum(['radio', 'checkbox', 'button', 'dropdown']).optional(),
+  minSelect: z.number().int().nonnegative().optional(),
+  maxSelect: z.number().int().positive().optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+})
+export type CreateModifierGroupInput = z.infer<typeof CreateModifierGroupSchema>
+export const UpdateModifierGroupSchema = CreateModifierGroupSchema.partial().extend({ id: uuid })
+export type UpdateModifierGroupInput = z.infer<typeof UpdateModifierGroupSchema>
+export const DeleteModifierGroupSchema = z.object({ id: uuid })
+export type DeleteModifierGroupInput = z.infer<typeof DeleteModifierGroupSchema>
+
+export const CreateModifierOptionSchema = z.object({
+  groupId: uuid,
+  name: z.string().min(1).max(120),
+  code: z.string().max(64).nullable().optional(),
+  imageUrl: z.string().max(2000).nullable().optional(),
+  priceAdjustment: z.number().int().optional(),
+  isDefault: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+})
+export type CreateModifierOptionInput = z.infer<typeof CreateModifierOptionSchema>
+export const UpdateModifierOptionSchema = CreateModifierOptionSchema.omit({ groupId: true })
+  .partial()
+  .extend({ id: uuid })
+export type UpdateModifierOptionInput = z.infer<typeof UpdateModifierOptionSchema>
+export const DeleteModifierOptionSchema = z.object({ id: uuid })
+export type DeleteModifierOptionInput = z.infer<typeof DeleteModifierOptionSchema>
+
+export const CreateModifierEffectSchema = z
+  .object({
+    modifierOptionId: uuid,
+    effectType: z.enum(['add', 'replace', 'set_qty', 'none']),
+    targetItemId: uuid.nullable().optional(),
+    newItemId: uuid.nullable().optional(),
+    quantity: z.number().nonnegative().nullable().optional(),
+    unit: z.string().max(32).nullable().optional(),
+  })
+  .refine((v) => v.effectType === 'none' || (!!v.targetItemId && v.quantity != null), {
+    message: 'target item + quantity are required (unless effect_type is none)',
+    path: ['targetItemId'],
+  })
+  .refine((v) => v.effectType !== 'replace' || !!v.newItemId, {
+    message: 'new item is required for replace',
+    path: ['newItemId'],
+  })
+export type CreateModifierEffectInput = z.infer<typeof CreateModifierEffectSchema>
+export const DeleteModifierEffectSchema = z.object({ id: uuid })
+export type DeleteModifierEffectInput = z.infer<typeof DeleteModifierEffectSchema>
+
+export const AssignProductModifierGroupSchema = z.object({
+  productId: uuid,
+  modifierGroupId: uuid,
+  sortOrder: z.number().int().optional(),
+})
+export type AssignProductModifierGroupInput = z.infer<typeof AssignProductModifierGroupSchema>
+export const UnassignProductModifierGroupSchema = z.object({
+  productId: uuid,
+  modifierGroupId: uuid,
+})
+export type UnassignProductModifierGroupInput = z.infer<typeof UnassignProductModifierGroupSchema>
