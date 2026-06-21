@@ -20,7 +20,7 @@ create table if not exists public.modifier_group (
   display_type   text not null default 'radio' check (display_type in ('radio', 'checkbox', 'button', 'dropdown')),
   min_select     integer not null default 0 check (min_select >= 0),
   max_select     integer not null default 1 check (max_select >= 1),
-  sort           integer not null default 0,
+  sort_order     integer not null default 0,
   is_active      boolean not null default true,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
@@ -38,7 +38,7 @@ create table if not exists public.modifier_option (
   price_adjustment bigint not null default 0,   -- minor units (satang); may be negative
   is_default       boolean not null default false,
   is_active        boolean not null default true,
-  sort             integer not null default 0,
+  sort_order       integer not null default 0,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   foreign key (group_id, tenant_id) references public.modifier_group (id, tenant_id) on delete cascade,
@@ -49,7 +49,7 @@ create table if not exists public.product_modifier_group (
   tenant_id        uuid not null,
   product_id       uuid not null,
   modifier_group_id uuid not null,
-  sort             integer not null default 0,
+  sort_order       integer not null default 0,
   primary key (product_id, modifier_group_id),
   foreign key (product_id, tenant_id) references public.product (id, tenant_id) on delete cascade,
   foreign key (modifier_group_id, tenant_id) references public.modifier_group (id, tenant_id) on delete cascade
