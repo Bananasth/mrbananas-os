@@ -9,6 +9,7 @@ import {
   createProduct,
   createRecipe,
   deleteInventoryItem,
+  generateSku,
   deleteProduct,
   deleteRecipe,
   deleteRecipeVersion,
@@ -24,20 +25,31 @@ import {
 
 export type FormState = { ok?: boolean; error?: string }
 
+type ItemType = 'RM' | 'SF' | 'PK' | 'FG' | 'MD' | 'SV'
+
 // 0. Inventory items ----------------------------------------------------------------------
 export async function createInventoryItemAction(
   _prev: FormState,
   fd: FormData,
 ): Promise<FormState> {
   const res = await createInventoryItem({
-    itemKind: fd.get('itemKind') as 'raw' | 'semi_finished' | 'finished',
-    baseUnit: typeof fd.get('baseUnit') === 'string' ? (fd.get('baseUnit') as string).trim() : '',
-    name: typeof fd.get('name') === 'string' ? (fd.get('name') as string).trim() || undefined : undefined,
-    sku: typeof fd.get('sku') === 'string' ? (fd.get('sku') as string).trim() || undefined : undefined,
+    itemType: str(fd, 'itemType') as ItemType,
+    name: str(fd, 'name'),
+    sku: str(fd, 'sku'),
+    baseUnit: str(fd, 'baseUnit'),
   })
   if (!res.ok) return { error: res.error.message }
   revalidatePath('/admin/inventory/items')
   return { ok: true }
+}
+
+/** Generate the next SKU for a type — called directly from the item form. */
+export async function generateSkuAction(
+  itemType: ItemType,
+): Promise<{ ok: true; sku: string } | { ok: false; error: string }> {
+  const res = await generateSku({ itemType })
+  if (!res.ok) return { ok: false, error: res.error.message }
+  return { ok: true, sku: res.value.sku }
 }
 
 const str = (fd: FormData, k: string): string => {
@@ -56,6 +68,7 @@ export async function updateInventoryItemAction(
 ): Promise<FormState> {
   const res = await updateInventoryItem({
     id: str(fd, 'id'),
+    itemType: (optStr(fd, 'itemType') as ItemType | null) ?? undefined,
     baseUnit: optStr(fd, 'baseUnit') ?? undefined,
     name: optStr(fd, 'name') ?? undefined,
     sku: optStr(fd, 'sku') ?? undefined,

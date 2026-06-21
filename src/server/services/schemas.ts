@@ -108,31 +108,37 @@ export const StockOnHandSchema = z.object({
 })
 export type StockOnHandInput = z.infer<typeof StockOnHandSchema>
 
-// 4b. Create inventory item (supertype + raw_material / semi_finished subtype) -------------
-export const CreateInventoryItemSchema = z
-  .object({
-    itemKind: z.enum(['raw', 'semi_finished', 'finished']),
-    baseUnit: z.string().min(1).max(32),
-    name: z.string().min(1).max(200).optional(),
-    sku: z.string().min(1).max(64).optional(),
-  })
-  .refine((v) => v.itemKind === 'finished' || (!!v.name && !!v.sku), {
-    message: 'name and sku are required for raw / semi_finished items',
-    path: ['name'],
-  })
+// 4b. Create inventory item (item_type + canonical name/sku on inventory_item) ------------
+const itemType = z.enum(['RM', 'SF', 'PK', 'FG', 'MD', 'SV'])
+
+export const CreateInventoryItemSchema = z.object({
+  itemType,
+  name: z.string().min(1).max(200),
+  sku: z.string().min(1).max(64),
+  baseUnit: z.string().min(1).max(32),
+})
 export type CreateInventoryItemInput = z.infer<typeof CreateInventoryItemSchema>
+
+export const GenerateSkuSchema = z.object({ itemType })
+export type GenerateSkuInput = z.infer<typeof GenerateSkuSchema>
 
 // 4c. Update / delete inventory item ------------------------------------------------------
 export const UpdateInventoryItemSchema = z
   .object({
     id: uuid,
+    itemType: itemType.optional(),
     baseUnit: z.string().min(1).max(32).optional(),
     name: z.string().min(1).max(200).optional(),
     sku: z.string().min(1).max(64).optional(),
   })
-  .refine((v) => v.baseUnit !== undefined || v.name !== undefined || v.sku !== undefined, {
-    message: 'nothing to update',
-  })
+  .refine(
+    (v) =>
+      v.itemType !== undefined ||
+      v.baseUnit !== undefined ||
+      v.name !== undefined ||
+      v.sku !== undefined,
+    { message: 'nothing to update' },
+  )
 export type UpdateInventoryItemInput = z.infer<typeof UpdateInventoryItemSchema>
 
 export const DeleteInventoryItemSchema = z.object({ id: uuid })

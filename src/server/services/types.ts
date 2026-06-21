@@ -68,17 +68,28 @@ export type RecipeIngredient = {
 }
 
 export type ItemKind = 'raw' | 'semi_finished' | 'finished'
+/** Canonical item type (SKU prefix). RM/SF/FG map to item_kind; PK/MD/SV are new. */
+export type ItemType = 'RM' | 'SF' | 'PK' | 'FG' | 'MD' | 'SV'
+
+export const ITEM_TYPES: { value: ItemType; label: string }[] = [
+  { value: 'RM', label: 'Raw Material' },
+  { value: 'SF', label: 'Semi Finished' },
+  { value: 'PK', label: 'Packaging' },
+  { value: 'FG', label: 'Finished Goods' },
+  { value: 'MD', label: 'Merchandise' },
+  { value: 'SV', label: 'Service' },
+]
 
 export type InventoryItem = {
   id: string
   tenant_id: string
-  item_kind: ItemKind
+  item_type: ItemType | null
+  item_kind: ItemKind | null
   base_unit: string
+  name: string | null
+  sku: string | null
   created_at: string
   updated_at: string
-  /** Name/SKU from the raw_material / semi_finished subtype (null for bare finished items). */
-  name?: string | null
-  sku?: string | null
 }
 
 export type Workstation = {

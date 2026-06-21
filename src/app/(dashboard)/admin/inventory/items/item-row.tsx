@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import type { InventoryItem } from "@/server/services/types";
+import { ITEM_TYPES, type InventoryItem } from "@/server/services/types";
 import { deleteInventoryItemAction, updateInventoryItemAction, type FormState } from "../../actions";
 
 const init: FormState = {};
@@ -11,7 +11,6 @@ export function ItemRow({ item }: { item: InventoryItem }) {
   const [editing, setEditing] = useState(false);
   const [editState, editAction] = useActionState(updateInventoryItemAction, init);
   const [delState, delAction] = useActionState(deleteInventoryItemAction, init);
-  const canRename = item.item_kind === "raw" || item.item_kind === "semi_finished";
 
   useEffect(() => {
     if (editState.ok) setEditing(false);
@@ -23,12 +22,15 @@ export function ItemRow({ item }: { item: InventoryItem }) {
         <td colSpan={5} className="py-2">
           <form action={editAction} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="id" value={item.id} />
-            {canRename ? (
-              <>
-                <input name="name" defaultValue={item.name ?? ""} placeholder="Name" className={inputCls} />
-                <input name="sku" defaultValue={item.sku ?? ""} placeholder="SKU" className={`${inputCls} w-28`} />
-              </>
-            ) : null}
+            <select name="itemType" defaultValue={item.item_type ?? "RM"} className={inputCls}>
+              {ITEM_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.value}
+                </option>
+              ))}
+            </select>
+            <input name="name" defaultValue={item.name ?? ""} placeholder="Name" className={inputCls} />
+            <input name="sku" defaultValue={item.sku ?? ""} placeholder="SKU" className={`${inputCls} w-28`} />
             <input name="baseUnit" defaultValue={item.base_unit} placeholder="Unit" className={`${inputCls} w-20`} />
             <button type="submit" className="rounded-md bg-accent px-3 py-1 text-sm font-semibold text-fg hover:opacity-90">
               บันทึก · Save
@@ -49,13 +51,11 @@ export function ItemRow({ item }: { item: InventoryItem }) {
 
   return (
     <tr className="border-b border-border/60">
-      <td className="py-2 pr-3">
-        {item.name ?? <span className="text-muted">— (finished) —</span>}
-      </td>
+      <td className="py-2 pr-3">{item.name ?? <span className="text-muted">—</span>}</td>
       <td className="py-2 pr-3 font-mono text-xs">{item.sku ?? "—"}</td>
       <td className="py-2 pr-3">
         <span className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
-          {item.item_kind}
+          {item.item_type ?? item.item_kind ?? "—"}
         </span>
       </td>
       <td className="py-2 pr-3">{item.base_unit}</td>
@@ -70,7 +70,7 @@ export function ItemRow({ item }: { item: InventoryItem }) {
           <form
             action={delAction}
             onSubmit={(e) => {
-              if (!confirm(`ลบ "${item.name ?? item.item_kind}" ? · Delete this item?`)) e.preventDefault();
+              if (!confirm(`ลบ "${item.name ?? item.sku ?? ""}" ? · Delete this item?`)) e.preventDefault();
             }}
           >
             <input type="hidden" name="id" value={item.id} />

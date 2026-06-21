@@ -39,7 +39,7 @@ export default async function ItemsPage() {
                 <tr className="border-b border-border text-left text-xs text-muted">
                   <th className={th}>ชื่อ · Name</th>
                   <th className={th}>SKU</th>
-                  <th className={th}>ชนิด · Kind</th>
+                  <th className={th}>ประเภท · Type</th>
                   <th className={th}>หน่วย · Unit</th>
                   <th className="py-2 text-right font-medium">จัดการ · Actions</th>
                 </tr>

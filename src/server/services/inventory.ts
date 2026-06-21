@@ -7,6 +7,8 @@ import {
   type CreateInventoryItemInput,
   DeleteInventoryItemSchema,
   type DeleteInventoryItemInput,
+  GenerateSkuSchema,
+  type GenerateSkuInput,
   ReceiveInventorySchema,
   type ReceiveInventoryInput,
   StockOnHandSchema,
@@ -27,11 +29,26 @@ const ITEM_REFERENCES: { table: string; col: string; label: string }[] = [
 
 const READ_ROLES = ['owner', 'manager', 'staff', 'baker'] as const
 
-/**
- * Create an inventory item (owner only). For raw / semi_finished it writes the supertype
- * (inventory_item) then the named subtype (raw_material / semi_finished); for finished it
- * writes the bare supertype. Uses one client-generated id for both rows (shared PK).
- */
+// RM/SF/FG map to the legacy item_kind; PK/MD/SV have no subtype kind.
+const KIND_BY_TYPE: Record<string, 'raw' | 'semi_finished' | 'finished' | null> = {
+  RM: 'raw',
+  SF: 'semi_finished',
+  FG: 'finished',
+  PK: null,
+  MD: null,
+  SV: null,
+}
+
+/** Friendly duplicate-key message for the per-tenant name/sku unique indexes. */
+function dupMessage(error: { code?: string; message?: string }): ServiceError | null {
+  if (error.code !== '23505') return null
+  const m = error.message ?? ''
+  if (m.includes('name')) return serviceError('conflict', 'ชื่อซ้ำ · Item name already exists for this shop.')
+  if (m.includes('sku')) return serviceError('conflict', 'SKU ซ้ำ · SKU already exists for this shop.')
+  return serviceError('conflict', 'ข้อมูลซ้ำ · Duplicate name or SKU.')
+}
+
+/** Create an inventory item (owner only): item_type + name + sku on the supertype. */
 export async function createInventoryItem(
   input: CreateInventoryItemInput,
 ): Promise<Result<InventoryItem, ServiceError>> {
@@ -41,25 +58,33 @@ export async function createInventoryItem(
   if (!parsed.ok) return parsed
   const { ctx, db } = gate.value
   const v = parsed.value
-  const id = crypto.randomUUID()
-
   const { data, error } = await db
     .from('inventory_item')
-    .insert({ id, tenant_id: ctx.tenantId, item_kind: v.itemKind, base_unit: v.baseUnit })
+    .insert({
+      tenant_id: ctx.tenantId,
+      item_type: v.itemType,
+      item_kind: KIND_BY_TYPE[v.itemType] ?? null,
+      base_unit: v.baseUnit,
+      name: v.name,
+      sku: v.sku,
+    })
     .select('*')
     .single()
-  if (error) return err(serviceError('db', error.message))
+  if (error) return err(dupMessage(error) ?? serviceError('db', error.message))
+  return ok(data as InventoryItem)
+}
 
-  if (v.itemKind === 'raw' || v.itemKind === 'semi_finished') {
-    const table = v.itemKind === 'raw' ? 'raw_material' : 'semi_finished'
-    const { error: subErr } = await db
-      .from(table)
-      .insert({ id, tenant_id: ctx.tenantId, item_kind: v.itemKind, sku: v.sku, name: v.name })
-    if (subErr) {
-      return err(serviceError('db', `inventory_item created but ${table} failed: ${subErr.message}`))
-    }
-  }
-  return ok({ ...(data as InventoryItem), name: v.name ?? null, sku: v.sku ?? null })
+/** Generate the next available SKU for an item type (e.g. RM0001). Never reuses numbers. */
+export async function generateSku(
+  input: GenerateSkuInput,
+): Promise<Result<{ sku: string }, ServiceError>> {
+  const gate = await getServiceContext(['owner'])
+  if (!gate.ok) return gate
+  const parsed = parseInput(GenerateSkuSchema, input)
+  if (!parsed.ok) return parsed
+  const { data, error } = await gate.value.db.rpc('next_sku', { p_prefix: parsed.value.itemType })
+  if (error) return err(serviceError('db', error.message))
+  return ok({ sku: data as string })
 }
 
 /** Stock on hand for a branch (optionally one item), from the RLS-scoped stock_on_hand view. */
@@ -107,10 +132,7 @@ export async function receiveInventory(
   return ok({ lotId: data as string })
 }
 
-/**
- * Rename / re-unit an inventory item (owner only). base_unit updates the supertype; name/sku
- * update the raw_material / semi_finished subtype (finished items have no name to edit).
- */
+/** Edit an inventory item (owner only): item_type / name / SKU / base_unit on the supertype. */
 export async function updateInventoryItem(
   input: UpdateInventoryItemInput,
 ): Promise<Result<InventoryItem, ServiceError>> {
@@ -120,43 +142,23 @@ export async function updateInventoryItem(
   if (!parsed.ok) return parsed
   const { ctx, db } = gate.value
   const v = parsed.value
-
-  const { data: existing, error: e0 } = await db
+  const patch: Record<string, string | null> = {}
+  if (v.itemType !== undefined) {
+    patch.item_type = v.itemType
+    patch.item_kind = KIND_BY_TYPE[v.itemType] ?? null
+  }
+  if (v.name !== undefined) patch.name = v.name
+  if (v.sku !== undefined) patch.sku = v.sku
+  if (v.baseUnit !== undefined) patch.base_unit = v.baseUnit
+  const { data, error } = await db
     .from('inventory_item')
-    .select('*')
+    .update(patch)
     .eq('id', v.id)
     .eq('tenant_id', ctx.tenantId)
-    .maybeSingle()
-  if (e0) return err(serviceError('db', e0.message))
-  if (!existing) return err(serviceError('not_found', 'Item not found.'))
-  const item = existing as InventoryItem
-
-  if (v.baseUnit) {
-    const { error } = await db
-      .from('inventory_item')
-      .update({ base_unit: v.baseUnit })
-      .eq('id', v.id)
-      .eq('tenant_id', ctx.tenantId)
-    if (error) return err(serviceError('db', error.message))
-  }
-
-  if ((v.name || v.sku) && (item.item_kind === 'raw' || item.item_kind === 'semi_finished')) {
-    const table = item.item_kind === 'raw' ? 'raw_material' : 'semi_finished'
-    const patch: Record<string, string> = {}
-    if (v.name) patch.name = v.name
-    if (v.sku) patch.sku = v.sku
-    const { error } = await db.from(table).update(patch).eq('id', v.id).eq('tenant_id', ctx.tenantId)
-    if (error) return err(serviceError('db', error.message))
-  } else if ((v.name || v.sku) && item.item_kind === 'finished') {
-    return err(serviceError('validation', 'Finished items have no name/SKU to edit.'))
-  }
-
-  return ok({
-    ...item,
-    base_unit: v.baseUnit ?? item.base_unit,
-    name: v.name ?? item.name ?? null,
-    sku: v.sku ?? item.sku ?? null,
-  })
+    .select('*')
+    .single()
+  if (error) return err(dupMessage(error) ?? serviceError('db', error.message))
+  return ok(data as InventoryItem)
 }
 
 /**
