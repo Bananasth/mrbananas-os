@@ -17,6 +17,7 @@ create table if not exists public.modifier_group (
   description    text,
   is_required    boolean not null default false,
   selection_type text not null default 'single' check (selection_type in ('single', 'multiple')),
+  display_type   text not null default 'radio' check (display_type in ('radio', 'checkbox', 'button', 'dropdown')),
   min_select     integer not null default 0 check (min_select >= 0),
   max_select     integer not null default 1 check (max_select >= 1),
   sort           integer not null default 0,
@@ -32,7 +33,9 @@ create table if not exists public.modifier_option (
   tenant_id        uuid not null,
   group_id         uuid not null,
   name             text not null,
-  price_adjustment bigint not null default 0, -- minor units (satang); may be negative
+  code             text,                        -- optional SKU/code
+  image_url        text,                        -- optional icon/image
+  price_adjustment bigint not null default 0,   -- minor units (satang); may be negative
   is_default       boolean not null default false,
   is_active        boolean not null default true,
   sort             integer not null default 0,
