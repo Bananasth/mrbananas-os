@@ -84,6 +84,22 @@ export const CreateInventoryItemSchema = z
   })
 export type CreateInventoryItemInput = z.infer<typeof CreateInventoryItemSchema>
 
+// 4c. Update / delete inventory item ------------------------------------------------------
+export const UpdateInventoryItemSchema = z
+  .object({
+    id: uuid,
+    baseUnit: z.string().min(1).max(32).optional(),
+    name: z.string().min(1).max(200).optional(),
+    sku: z.string().min(1).max(64).optional(),
+  })
+  .refine((v) => v.baseUnit !== undefined || v.name !== undefined || v.sku !== undefined, {
+    message: 'nothing to update',
+  })
+export type UpdateInventoryItemInput = z.infer<typeof UpdateInventoryItemSchema>
+
+export const DeleteInventoryItemSchema = z.object({ id: uuid })
+export type DeleteInventoryItemInput = z.infer<typeof DeleteInventoryItemSchema>
+
 // 5. Receive inventory --------------------------------------------------------------------
 export const ReceiveInventorySchema = z.object({
   branchId: uuid,

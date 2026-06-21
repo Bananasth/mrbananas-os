@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { listInventoryItems } from "@/server/services";
-import { Badge, Card, CardContent, CardHeader, CardTitle, td, th } from "../../_components/ui";
+import { Card, CardContent, CardHeader, CardTitle, th } from "../../_components/ui";
 import { ServiceErrorCard } from "../../_components/service-error";
 import { ItemForm } from "./item-form";
+import { ItemRow } from "./item-row";
 
 export const metadata: Metadata = { title: "Inventory items · Setup", robots: { index: false } };
 
@@ -39,19 +40,13 @@ export default async function ItemsPage() {
                   <th className={th}>ชื่อ · Name</th>
                   <th className={th}>SKU</th>
                   <th className={th}>ชนิด · Kind</th>
-                  <th className="py-2 font-medium">หน่วย · Unit</th>
+                  <th className={th}>หน่วย · Unit</th>
+                  <th className="py-2 text-right font-medium">จัดการ · Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {items.value.map((it) => (
-                  <tr key={it.id} className="border-b border-border/60">
-                    <td className={td}>{it.name ?? <span className="text-muted">— (finished) —</span>}</td>
-                    <td className="py-2 pr-3 font-mono text-xs">{it.sku ?? "—"}</td>
-                    <td className={td}>
-                      <Badge tone="neutral">{it.item_kind}</Badge>
-                    </td>
-                    <td className="py-2">{it.base_unit}</td>
-                  </tr>
+                  <ItemRow key={it.id} item={it} />
                 ))}
               </tbody>
             </table>

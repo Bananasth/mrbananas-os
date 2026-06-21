@@ -5,11 +5,25 @@ import { ensureBranch, getServiceContext, parseInput } from './context'
 import {
   CreateInventoryItemSchema,
   type CreateInventoryItemInput,
+  DeleteInventoryItemSchema,
+  type DeleteInventoryItemInput,
   ReceiveInventorySchema,
   type ReceiveInventoryInput,
   StockOnHandSchema,
+  UpdateInventoryItemSchema,
+  type UpdateInventoryItemInput,
 } from './schemas'
 import type { InventoryItem, StockOnHand } from './types'
+
+// Tables whose rows pin an inventory_item; deleting a referenced item is blocked (the DB also
+// enforces ON DELETE RESTRICT on most of these — this gives a friendly message first).
+const ITEM_REFERENCES: { table: string; col: string; label: string }[] = [
+  { table: 'recipe_ingredient', col: 'item_id', label: 'recipe ingredients' },
+  { table: 'inventory_lot', col: 'item_id', label: 'stock lots' },
+  { table: 'inventory_movement', col: 'item_id', label: 'stock movements' },
+  { table: 'purchase_order_line', col: 'item_id', label: 'purchase orders' },
+  { table: 'product', col: 'inventory_item_id', label: 'products' },
+]
 
 const READ_ROLES = ['owner', 'manager', 'staff', 'baker'] as const
 
@@ -91,4 +105,91 @@ export async function receiveInventory(
   })
   if (error) return err(serviceError('db', error.message))
   return ok({ lotId: data as string })
+}
+
+/**
+ * Rename / re-unit an inventory item (owner only). base_unit updates the supertype; name/sku
+ * update the raw_material / semi_finished subtype (finished items have no name to edit).
+ */
+export async function updateInventoryItem(
+  input: UpdateInventoryItemInput,
+): Promise<Result<InventoryItem, ServiceError>> {
+  const gate = await getServiceContext(['owner'])
+  if (!gate.ok) return gate
+  const parsed = parseInput(UpdateInventoryItemSchema, input)
+  if (!parsed.ok) return parsed
+  const { ctx, db } = gate.value
+  const v = parsed.value
+
+  const { data: existing, error: e0 } = await db
+    .from('inventory_item')
+    .select('*')
+    .eq('id', v.id)
+    .eq('tenant_id', ctx.tenantId)
+    .maybeSingle()
+  if (e0) return err(serviceError('db', e0.message))
+  if (!existing) return err(serviceError('not_found', 'Item not found.'))
+  const item = existing as InventoryItem
+
+  if (v.baseUnit) {
+    const { error } = await db
+      .from('inventory_item')
+      .update({ base_unit: v.baseUnit })
+      .eq('id', v.id)
+      .eq('tenant_id', ctx.tenantId)
+    if (error) return err(serviceError('db', error.message))
+  }
+
+  if ((v.name || v.sku) && (item.item_kind === 'raw' || item.item_kind === 'semi_finished')) {
+    const table = item.item_kind === 'raw' ? 'raw_material' : 'semi_finished'
+    const patch: Record<string, string> = {}
+    if (v.name) patch.name = v.name
+    if (v.sku) patch.sku = v.sku
+    const { error } = await db.from(table).update(patch).eq('id', v.id).eq('tenant_id', ctx.tenantId)
+    if (error) return err(serviceError('db', error.message))
+  } else if ((v.name || v.sku) && item.item_kind === 'finished') {
+    return err(serviceError('validation', 'Finished items have no name/SKU to edit.'))
+  }
+
+  return ok({
+    ...item,
+    base_unit: v.baseUnit ?? item.base_unit,
+    name: v.name ?? item.name ?? null,
+    sku: v.sku ?? item.sku ?? null,
+  })
+}
+
+/**
+ * Delete an inventory item (owner only). Blocked if it is referenced by recipe ingredients,
+ * stock lots, stock movements, purchase orders, or products (the DB also enforces RESTRICT on
+ * most of these). Otherwise the supertype + its subtype row are removed (cascade).
+ */
+export async function deleteInventoryItem(
+  input: DeleteInventoryItemInput,
+): Promise<Result<{ deleted: true }, ServiceError>> {
+  const gate = await getServiceContext(['owner'])
+  if (!gate.ok) return gate
+  const parsed = parseInput(DeleteInventoryItemSchema, input)
+  if (!parsed.ok) return parsed
+  const { ctx, db } = gate.value
+  const id = parsed.value.id
+
+  for (const ref of ITEM_REFERENCES) {
+    const { count, error } = await db
+      .from(ref.table)
+      .select('*', { count: 'exact', head: true })
+      .eq(ref.col, id)
+    if (error) return err(serviceError('db', error.message))
+    if ((count ?? 0) > 0) {
+      return err(serviceError('conflict', `ใช้งานอยู่ใน ${ref.label} (${count}) · in use by ${ref.label}; cannot delete.`))
+    }
+  }
+
+  const { error } = await db
+    .from('inventory_item')
+    .delete()
+    .eq('id', id)
+    .eq('tenant_id', ctx.tenantId)
+  if (error) return err(serviceError('db', error.message))
+  return ok({ deleted: true })
 }

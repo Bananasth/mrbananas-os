@@ -8,8 +8,10 @@ import {
   createInventoryItem,
   createProduct,
   createRecipe,
+  deleteInventoryItem,
   receiveInventory,
   setProductActive,
+  updateInventoryItem,
   upsertBranchPrice,
 } from '@/server/services'
 
@@ -40,6 +42,31 @@ const optStr = (fd: FormData, k: string): string | null => {
   return v === '' ? null : v
 }
 const bahtToSatang = (v: string): number => Math.round(Number.parseFloat(v) * 100)
+
+export async function updateInventoryItemAction(
+  _prev: FormState,
+  fd: FormData,
+): Promise<FormState> {
+  const res = await updateInventoryItem({
+    id: str(fd, 'id'),
+    baseUnit: optStr(fd, 'baseUnit') ?? undefined,
+    name: optStr(fd, 'name') ?? undefined,
+    sku: optStr(fd, 'sku') ?? undefined,
+  })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/inventory/items')
+  return { ok: true }
+}
+
+export async function deleteInventoryItemAction(
+  _prev: FormState,
+  fd: FormData,
+): Promise<FormState> {
+  const res = await deleteInventoryItem({ id: str(fd, 'id') })
+  if (!res.ok) return { error: res.error.message }
+  revalidatePath('/admin/inventory/items')
+  return { ok: true }
+}
 
 // 1. Products -----------------------------------------------------------------------------
 export async function createProductAction(_prev: FormState, fd: FormData): Promise<FormState> {
