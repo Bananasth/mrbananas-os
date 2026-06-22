@@ -27,3 +27,4 @@ export * from './modifiers' // POS modifier system (config CRUD + product modifi
 export * from './order-modifiers' // checkout-time option resolution + persistence
 export * from './stock-ledger' // stock adjustment / waste + movement history
 export * from './qr-staff' // QR staff station board (claim/prep/QC/rework/photo/complete + timeline)
+export * from './qr-admin' // QR owner admin (config / leak / complaints / KPI)

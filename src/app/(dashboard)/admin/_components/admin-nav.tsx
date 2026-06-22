@@ -15,6 +15,7 @@ const tabs = [
   { href: "/admin/inventory/stock", label: "สต๊อกคงเหลือ", en: "Stock" },
   { href: "/admin/inventory/adjust", label: "ปรับสต๊อก", en: "Adjust" },
   { href: "/admin/inventory/movements", label: "ประวัติ", en: "Movements" },
+  { href: "/admin/settings/qr", label: "QR ออเดอร์", en: "QR" },
 ];
 
 export function AdminNav() {
