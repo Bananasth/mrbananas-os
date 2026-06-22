@@ -244,3 +244,92 @@ export async function assignComplaintToMe(complaintId: string): Promise<Result<u
   if (error) return err(serviceError('validation', error.message))
   return ok(data)
 }
+
+// ============================ KPI ============================
+
+export type OrderCounts = {
+  total: number; awaitingPayment: number; active: number; ready: number
+  completed: number; needsReview: number; expiredCancelled: number
+}
+export type RecipePerf = {
+  recipeVersionId: string; productName: string; items: number; completed: number; firstPass: number
+  reworked: number; avgPrepSeconds: number | null; avgRecipeView: number | null; avgMethodView: number | null; complaints: number
+}
+export type EmployeePerf = {
+  employeeId: string; employeeName: string; productName: string; madeInTraining: boolean
+  completed: number; firstPass: number; reworked: number; avgPrepSeconds: number | null; complaints: number
+}
+
+/** recipe_version_id -> product name (recipe_version -> recipe -> product). */
+async function rvProductNames(db: ServerDb, rvIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  if (rvIds.length === 0) return out
+  const rv = await db.from('recipe_version').select('id, recipe_id').in('id', rvIds)
+  const rvRows = (rv.data ?? []) as Array<{ id: string; recipe_id: string }>
+  const recipeIds = [...new Set(rvRows.map((r) => r.recipe_id))]
+  const rc = recipeIds.length ? await db.from('recipe').select('id, product_id').in('id', recipeIds) : { data: [] }
+  const rcMap = new Map(((rc.data ?? []) as Array<{ id: string; product_id: string }>).map((r) => [r.id, r.product_id]))
+  const pIds = [...new Set([...rcMap.values()])]
+  const p = pIds.length ? await db.from('product').select('id, name').in('id', pIds) : { data: [] }
+  const pMap = new Map(((p.data ?? []) as Array<{ id: string; name: string }>).map((x) => [x.id, x.name]))
+  for (const r of rvRows) out.set(r.id, pMap.get(rcMap.get(r.recipe_id) ?? '') ?? 'recipe')
+  return out
+}
+
+export async function kpiOrderCounts(branchId: string): Promise<Result<OrderCounts, ServiceError>> {
+  const gate = await getServiceContext(OWNER)
+  if (!gate.ok) return gate
+  const b = ensureBranch(gate.value.ctx, branchId)
+  if (!b.ok) return b
+  const { data, error } = await gate.value.db.from('qr_order').select('status').eq('branch_id', branchId).limit(5000)
+  if (error) return err(serviceError('db', error.message))
+  const c: OrderCounts = { total: 0, awaitingPayment: 0, active: 0, ready: 0, completed: 0, needsReview: 0, expiredCancelled: 0 }
+  for (const r of (data ?? []) as Array<{ status: string }>) {
+    c.total++
+    if (r.status === 'pending_payment') c.awaitingPayment++
+    else if (r.status === 'order_received' || r.status === 'in_progress') c.active++
+    else if (r.status === 'ready_for_pickup') c.ready++
+    else if (r.status === 'completed') c.completed++
+    else if (r.status === 'needs_review') c.needsReview++
+    else if (r.status === 'expired' || r.status === 'cancelled') c.expiredCancelled++
+  }
+  return ok(c)
+}
+
+export async function kpiRecipePerformance(): Promise<Result<RecipePerf[], ServiceError>> {
+  const gate = await getServiceContext(OWNER)
+  if (!gate.ok) return gate
+  const { db } = gate.value
+  const { data, error } = await db.from('qr_recipe_version_performance').select('*')
+  if (error) return err(serviceError('db', error.message))
+  type Row = { recipe_version_id: string; items: number; completed_items: number; first_pass_items: number; reworked_items: number; avg_prep_seconds: number | null; avg_recipe_view_seconds: number | null; avg_method_view_seconds: number | null; complaints: number }
+  const rows = (data ?? []) as Row[]
+  const names = await rvProductNames(db, rows.map((r) => r.recipe_version_id))
+  return ok(rows.map((r) => ({
+    recipeVersionId: r.recipe_version_id, productName: names.get(r.recipe_version_id) ?? 'recipe',
+    items: r.items, completed: r.completed_items, firstPass: r.first_pass_items, reworked: r.reworked_items,
+    avgPrepSeconds: r.avg_prep_seconds, avgRecipeView: r.avg_recipe_view_seconds, avgMethodView: r.avg_method_view_seconds,
+    complaints: r.complaints,
+  })))
+}
+
+export async function kpiEmployeePerformance(): Promise<Result<EmployeePerf[], ServiceError>> {
+  const gate = await getServiceContext(OWNER)
+  if (!gate.ok) return gate
+  const { db } = gate.value
+  const { data, error } = await db.from('qr_employee_skill_matrix').select('*')
+  if (error) return err(serviceError('db', error.message))
+  type Row = { employee_id: string; recipe_version_id: string; made_in_training: boolean; completed_items: number; first_pass_items: number; reworked_items: number; avg_prep_seconds: number | null; complaints: number }
+  const rows = (data ?? []) as Row[]
+  const [names, empRes] = await Promise.all([
+    rvProductNames(db, rows.map((r) => r.recipe_version_id)),
+    rows.length ? db.from('employee').select('id, name').in('id', [...new Set(rows.map((r) => r.employee_id))]) : Promise.resolve({ data: [] }),
+  ])
+  const empMap = new Map(((empRes.data ?? []) as Array<{ id: string; name: string }>).map((e) => [e.id, e.name]))
+  return ok(rows.map((r) => ({
+    employeeId: r.employee_id, employeeName: empMap.get(r.employee_id) ?? r.employee_id.slice(0, 8),
+    productName: names.get(r.recipe_version_id) ?? 'recipe', madeInTraining: r.made_in_training,
+    completed: r.completed_items, firstPass: r.first_pass_items, reworked: r.reworked_items,
+    avgPrepSeconds: r.avg_prep_seconds, complaints: r.complaints,
+  })))
+}

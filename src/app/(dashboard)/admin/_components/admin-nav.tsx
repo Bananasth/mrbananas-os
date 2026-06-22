@@ -18,6 +18,7 @@ const tabs = [
   { href: "/admin/settings/qr", label: "QR ออเดอร์", en: "QR" },
   { href: "/admin/security/recipe-access", label: "เข้าถึงสูตร", en: "Recipe access" },
   { href: "/admin/complaints", label: "ร้องเรียน", en: "Complaints" },
+  { href: "/admin/kpi", label: "ตัวชี้วัด", en: "KPI" },
 ];
 
 export function AdminNav() {
