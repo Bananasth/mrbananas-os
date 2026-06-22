@@ -17,6 +17,7 @@ const tabs = [
   { href: "/admin/inventory/movements", label: "ประวัติ", en: "Movements" },
   { href: "/admin/settings/qr", label: "QR ออเดอร์", en: "QR" },
   { href: "/admin/security/recipe-access", label: "เข้าถึงสูตร", en: "Recipe access" },
+  { href: "/admin/complaints", label: "ร้องเรียน", en: "Complaints" },
 ];
 
 export function AdminNav() {
