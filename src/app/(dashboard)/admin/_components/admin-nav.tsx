@@ -15,6 +15,10 @@ const tabs = [
   { href: "/admin/inventory/stock", label: "สต๊อกคงเหลือ", en: "Stock" },
   { href: "/admin/inventory/adjust", label: "ปรับสต๊อก", en: "Adjust" },
   { href: "/admin/inventory/movements", label: "ประวัติ", en: "Movements" },
+  { href: "/admin/settings/qr", label: "QR ออเดอร์", en: "QR" },
+  { href: "/admin/security/recipe-access", label: "เข้าถึงสูตร", en: "Recipe access" },
+  { href: "/admin/complaints", label: "ร้องเรียน", en: "Complaints" },
+  { href: "/admin/kpi", label: "ตัวชี้วัด", en: "KPI" },
 ];
 
 export function AdminNav() {
