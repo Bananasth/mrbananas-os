@@ -20,8 +20,10 @@ export type QrProduct = {
 export type QrMenu = { enabled: boolean; pickup_instruction?: string | null; products?: QrProduct[] }
 
 export type QrCartItem = { product_id: string; qty: number; option_ids: string[] }
-export type QrPending = { tracking_token: string; order_id: string; amount: number; client_uuid: string }
-export type QrConfirm = { status: string; queue_number: number; order_id: string; already?: boolean; review_reason?: string }
+export type QrIntent = {
+  tracking_token: string; order_id: string; amount: number; client_uuid: string
+  provider: string; promptpay_target: string | null; expires_at: string
+}
 export type QrStatusItem = { name: string; qty: number; status: string }
 export type QrStatus = {
   found: boolean; status?: string; queue_number?: number | null; paid_at?: string | null
@@ -40,11 +42,9 @@ async function rpc<T>(fn: string, params: Record<string, unknown>): Promise<Resu
 
 export const getQrMenu = (slug: string) => rpc<QrMenu>('qr_menu', { p_slug: slug })
 
-export const createPendingOrder = (slug: string, items: QrCartItem[], note: string | null) =>
-  rpc<QrPending>('qr_create_pending_order', { p_slug: slug, p_items: items, p_note: note })
-
-export const confirmQrPayment = (trackingToken: string, clientUuid: string) =>
-  rpc<QrConfirm>('qr_confirm_payment', { p_tracking_token: trackingToken, p_client_uuid: clientUuid })
+/** Locked-amount payment intent (channel-agnostic). Returns the QR/provider data. */
+export const createPaymentIntent = (slug: string, items: QrCartItem[], note: string | null) =>
+  rpc<QrIntent>('qr_create_payment_intent', { p_slug: slug, p_items: items, p_note: note })
 
 export const getQrStatus = (trackingToken: string) =>
   rpc<QrStatus>('qr_order_status', { p_tracking_token: trackingToken })
