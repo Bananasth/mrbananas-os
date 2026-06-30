@@ -1,22 +1,18 @@
 import type { ReactNode } from "react";
 import { requireRole } from "@/server/auth/guard";
-import { AdminNav } from "./_components/admin-nav";
+import { Sidebar } from "./_components/sidebar";
 
-/** Setup is OWNER-ONLY. requireRole redirects managers/others to their home surface. */
+/**
+ * Owner console shell. OWNER-ONLY for now (requireRole redirects others). The sidebar
+ * is role-aware (see nav-config); opening the console to managers for their permitted
+ * modules is a follow-up auth change.
+ */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   await requireRole(["owner"]);
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">
-          ตั้งค่าระบบ <span className="text-base font-normal text-muted">Setup</span>
-        </h1>
-        <p className="text-sm text-muted">
-          จัดการสินค้า ราคา สูตร และสต๊อก · Catalog, pricing, recipes &amp; stock
-        </p>
-      </div>
-      <AdminNav />
-      {children}
+    <div className="flex gap-6">
+      <Sidebar role="owner" />
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
