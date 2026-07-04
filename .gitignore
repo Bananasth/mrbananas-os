@@ -9,3 +9,7 @@
 next-env.d.ts
 .vercel
 *.tsbuildinfo
+
+# Local development files
+.claude/settings.local.json
+coverage/
