@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { href: "/admin", label: "ภาพรวม", en: "Overview", exact: true },
+  { href: "/admin/sales", label: "การขาย", en: "Sales" },
   { href: "/admin/products", label: "สินค้า", en: "Products" },
   { href: "/admin/categories", label: "หมวดหมู่", en: "Categories" },
   { href: "/admin/pricing", label: "ราคาสาขา", en: "Pricing" },
