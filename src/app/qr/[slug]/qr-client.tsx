@@ -4,12 +4,16 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { QrMenu, QrProduct } from "@/server/services/qr-public";
 import { checkoutAction, pollStatusAction, type PayIntent } from "./actions";
+import { baht, type CartItem } from "./_components/shared";
+import { StoreHeader } from "./_components/store-header";
+import { CategoryNav } from "./_components/category-nav";
+import { ProductCard } from "./_components/product-card";
+import { ProductDetailSheet } from "./_components/product-detail-sheet";
+import { CartBar } from "./_components/cart-bar";
+import { CartSheet } from "./_components/cart-sheet";
 
-const baht = (satang: number) => `฿${(satang / 100).toFixed(2)}`;
 const SETTLED = new Set(["order_received", "in_progress", "ready_for_pickup", "completed", "needs_review"]);
 const DEAD = new Set(["expired", "cancelled"]);
-
-type CartItem = { key: string; productId: string; name: string; optionIds: string[]; optionLabel: string; unitPrice: number; qty: number };
 
 export function QrClient({ slug, menu }: { slug: string; menu: QrMenu }) {
   const router = useRouter();
@@ -21,6 +25,10 @@ export function QrClient({ slug, menu }: { slug: string; menu: QrMenu }) {
   const [remaining, setRemaining] = useState<number>(0);
   const [expired, setExpired] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // browse UI state
+  const [activeSection, setActiveSection] = useState<string>("");
+  const [openProduct, setOpenProduct] = useState<QrProduct | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const products = menu.products ?? [];
   const sections = useMemo(() => {
@@ -31,18 +39,26 @@ export function QrClient({ slug, menu }: { slug: string; menu: QrMenu }) {
     }
     return [...map.entries()];
   }, [products]);
+  const sectionNames = sections.map(([name]) => name);
 
   const total = cart.reduce((s, c) => s + c.unitPrice * c.qty, 0);
+  const cartCount = cart.reduce((s, c) => s + c.qty, 0);
 
-  function addToCart(item: Omit<CartItem, "qty">) {
+  function addToCart(item: Omit<CartItem, "qty">, qty = 1) {
     setCart((prev) => {
       const i = prev.findIndex((c) => c.key === item.key);
-      if (i >= 0) { const next = [...prev]; next[i] = { ...next[i], qty: next[i].qty + 1 }; return next; }
-      return [...prev, { ...item, qty: 1 }];
+      if (i >= 0) { const next = [...prev]; next[i] = { ...next[i], qty: next[i].qty + qty }; return next; }
+      return [...prev, { ...item, qty }];
     });
   }
   function setQty(key: string, delta: number) {
     setCart((prev) => prev.flatMap((c) => (c.key === key ? (c.qty + delta <= 0 ? [] : [{ ...c, qty: c.qty + delta }]) : [c])));
+  }
+
+  function selectSection(name: string) {
+    setActiveSection(name);
+    const idx = sectionNames.indexOf(name);
+    if (idx >= 0) document.getElementById(`qr-sec-${idx}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function checkout() {
@@ -87,12 +103,12 @@ export function QrClient({ slug, menu }: { slug: string; menu: QrMenu }) {
   }, [phase, pay, expired, router]);
 
   function startOver() {
-    setPhase("browse"); setPay(null); setExpired(false); setCart([]); setNote(""); setMsg(null);
+    setPhase("browse"); setPay(null); setExpired(false); setCart([]); setNote(""); setMsg(null); setCartOpen(false);
   }
 
   const mmss = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
 
-  // ---------- PAY ----------
+  // ---------- PAY (unchanged flow) ----------
   if (phase === "pay" && pay) {
     if (expired) {
       return (
@@ -143,114 +159,41 @@ export function QrClient({ slug, menu }: { slug: string; menu: QrMenu }) {
     );
   }
 
-  // ---------- BROWSE ----------
+  // ---------- BROWSE (Phase F redesign) ----------
   return (
-    <div className="mx-auto max-w-md px-4 pb-44 pt-5">
-      <header className="mb-4 flex items-center gap-2">
-        <span className="text-2xl" aria-hidden>🍌</span>
-        <h1 className="text-lg font-bold">สั่งเลย · Order</h1>
-      </header>
+    <div className="min-h-dvh bg-bg pb-28">
+      <StoreHeader pickup={menu.pickup_instruction} />
+      {sectionNames.length ? <CategoryNav sections={sectionNames} active={activeSection || sectionNames[0]} onSelect={selectSection} /> : null}
 
-      {products.length === 0 ? <p className="text-sm text-muted">ยังไม่มีสินค้า · No items available.</p> : null}
+      <div className="mx-auto max-w-md px-4 pt-4">
+        {products.length === 0 ? <p className="text-sm text-muted">ยังไม่มีสินค้า · No items available.</p> : null}
 
-      {sections.map(([section, items]) => (
-        <section key={section} className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold text-muted">{section}</h2>
-          <div className="space-y-3">
-            {items.map((p) => <ProductCard key={p.product_id} product={p} onAdd={addToCart} />)}
-          </div>
-        </section>
-      ))}
-
-      {cart.length > 0 ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur">
-          <div className="mx-auto max-w-md px-4 py-3">
-            <div className="mb-2 max-h-40 space-y-1 overflow-y-auto">
-              {cart.map((c) => (
-                <div key={c.key} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="truncate">{c.name}{c.optionLabel ? <span className="text-muted"> · {c.optionLabel}</span> : null}</span>
-                  <span className="flex items-center gap-2">
-                    <button onClick={() => setQty(c.key, -1)} className="h-6 w-6 rounded border border-border">−</button>
-                    <span className="w-4 text-center tabular-nums">{c.qty}</span>
-                    <button onClick={() => setQty(c.key, 1)} className="h-6 w-6 rounded border border-border">+</button>
-                    <span className="w-16 text-right tabular-nums">{baht(c.unitPrice * c.qty)}</span>
-                  </span>
-                </div>
-              ))}
+        {sections.map(([section, items], idx) => (
+          <section key={section} id={`qr-sec-${idx}`} className="mb-6" style={{ scrollMarginTop: 56 }}>
+            <h2 className="mb-2 text-sm font-semibold text-fg">{section}</h2>
+            <div className="space-y-2.5">
+              {items.map((p) => <ProductCard key={p.product_id} product={p} onOpen={setOpenProduct} />)}
             </div>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ · Note (optional)"
-              className="mb-2 w-full rounded-md border border-border bg-bg px-2 py-1.5 text-sm" />
-            {msg ? <p className="mb-2 text-sm text-red-600">{msg}</p> : null}
-            <button onClick={checkout} disabled={pending}
-              className="flex w-full items-center justify-between rounded-xl bg-accent px-4 py-3 font-semibold text-fg transition-opacity hover:opacity-90 disabled:opacity-50">
-              <span>{pending ? "กำลังดำเนินการ…" : "ชำระเงิน · Checkout"}</span>
-              <span className="tabular-nums">{baht(total)}</span>
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function ProductCard({ product, onAdd }: { product: QrProduct; onAdd: (i: Omit<CartItem, "qty">) => void }) {
-  const groups = product.modifier_groups ?? [];
-  const [sel, setSel] = useState<Record<string, string[]>>(() => {
-    const init: Record<string, string[]> = {};
-    for (const g of groups) {
-      const def = g.options.find((o) => o.is_default);
-      init[g.group_id] = g.is_required && def ? [def.option_id] : [];
-    }
-    return init;
-  });
-
-  function toggle(g: QrGroupLike, optId: string) {
-    setSel((prev) => {
-      const cur = prev[g.group_id] ?? [];
-      if (g.selection_type === "single") return { ...prev, [g.group_id]: cur[0] === optId ? (g.is_required ? cur : []) : [optId] };
-      const has = cur.includes(optId);
-      if (has) return { ...prev, [g.group_id]: cur.filter((x) => x !== optId) };
-      if (cur.length >= g.max_select) return prev;
-      return { ...prev, [g.group_id]: [...cur, optId] };
-    });
-  }
-
-  const optionIds = groups.flatMap((g) => sel[g.group_id] ?? []);
-  const adjust = groups.reduce((s, g) =>
-    s + (sel[g.group_id] ?? []).reduce((a, id) => a + (g.options.find((o) => o.option_id === id)?.price_adjustment ?? 0), 0), 0);
-  const unitPrice = product.price + adjust;
-  const optionLabel = groups.flatMap((g) => (sel[g.group_id] ?? []).map((id) => g.options.find((o) => o.option_id === id)?.name).filter(Boolean)).join(", ");
-  const missingRequired = groups.some((g) => g.is_required && (sel[g.group_id] ?? []).length < Math.max(g.min_select, 1));
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-3">
-      <div className="flex items-center justify-between">
-        <span className="font-medium">{product.name}</span>
-        <span className="tabular-nums text-sm text-muted">{baht(product.price)}</span>
+          </section>
+        ))}
+        {msg ? <p className="text-sm text-red-600">{msg}</p> : null}
       </div>
-      {groups.map((g) => (
-        <div key={g.group_id} className="mt-2">
-          <p className="text-xs text-muted">{g.name}{g.is_required ? " *" : ""}</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {g.options.map((o) => {
-              const on = (sel[g.group_id] ?? []).includes(o.option_id);
-              return (
-                <button key={o.option_id} onClick={() => toggle(g, o.option_id)}
-                  className={`rounded-full border px-2.5 py-1 text-xs ${on ? "border-accent bg-accent/20 font-medium" : "border-border"}`}>
-                  {o.name}{o.price_adjustment ? ` (+${baht(o.price_adjustment)})` : ""}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      <button onClick={() => onAdd({ key: `${product.product_id}|${[...optionIds].sort().join(",")}`, productId: product.product_id, name: product.name, optionIds, optionLabel, unitPrice })}
-        disabled={missingRequired}
-        className="mt-3 w-full rounded-lg border border-accent bg-accent/10 py-2 text-sm font-medium disabled:opacity-40">
-        {missingRequired ? "เลือกตัวเลือก · Choose options" : `เพิ่ม · Add · ${baht(unitPrice)}`}
-      </button>
+
+      <CartBar count={cartCount} total={total} onOpen={() => setCartOpen(true)} />
+
+      <ProductDetailSheet product={openProduct} onClose={() => setOpenProduct(null)} onAdd={addToCart} />
+
+      <CartSheet
+        open={cartOpen}
+        items={cart}
+        note={note}
+        pending={pending}
+        error={msg}
+        onClose={() => setCartOpen(false)}
+        onQty={setQty}
+        onNote={setNote}
+        onCheckout={checkout}
+      />
     </div>
   );
 }
-
-type QrGroupLike = QrProduct["modifier_groups"][number];
