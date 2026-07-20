@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import {
   claimItem, startPreparing, startQc, passQc, qcFail, uploadCompletionPhoto, completeItem,
-  openRecipe, closeRecipe, getItemTimeline, type Device, type TimelineRow,
+  openRecipe, closeRecipe, getItemTimeline, completePickup, type Device, type TimelineRow,
 } from '@/server/services'
 
 export type ActionState = { ok: boolean; error?: string; data?: unknown }
@@ -45,6 +45,15 @@ export async function qcFailAction(orderItemId: string, employeeId: string, reas
 }
 export async function uploadPhotoAction(orderItemId: string, employeeId: string, photoUrl: string, deviceId: string | null, deviceName: string | null) {
   return done(await uploadCompletionPhoto({ orderItemId, employeeId, photoUrl, device: await device(deviceId, deviceName) }))
+}
+
+/**
+ * Confirm pickup/handover for a ready_for_pickup order (order-level, not item-level).
+ * The actor is the AUTHENTICATED user's own employee row — resolved in the service and
+ * re-verified by app.qr_complete_pickup — so the board's "I am" selector is not used here.
+ */
+export async function completePickupAction(orderId: string, branchId: string) {
+  return done(await completePickup({ orderId, branchId }))
 }
 
 /** Open recipe/method (one-time). Returns the content without revalidating the whole board. */

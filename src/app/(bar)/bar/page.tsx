@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guard";
-import { listBarQueue, listBarEmployees } from "@/server/services";
+import { listBarQueue, listBarEmployees, listPickupQueue } from "@/server/services";
 import { BarClient } from "./bar-client";
 
 export const metadata: Metadata = { title: "Bar Station", robots: { index: false } };
@@ -12,7 +12,13 @@ export default async function BarPage() {
     return <p className="text-sm text-muted">ไม่พบสาขาในสิทธิ์ของคุณ · No branch in your context.</p>;
   }
 
-  const [queue, employees] = await Promise.all([listBarQueue(branchId), listBarEmployees(branchId)]);
+  // listPickupQueue is manager/staff-only (mirrors the pickup RPC): a baker simply gets no
+  // handover list, so the section is absent rather than broken.
+  const [queue, employees, pickups] = await Promise.all([
+    listBarQueue(branchId),
+    listBarEmployees(branchId),
+    listPickupQueue(branchId),
+  ]);
   if (!queue.ok) {
     return (
       <p className="text-sm text-red-600">
@@ -25,6 +31,8 @@ export default async function BarPage() {
     <BarClient
       items={queue.value}
       employees={employees.ok ? employees.value : []}
+      pickups={pickups.ok ? pickups.value : []}
+      branchId={branchId}
     />
   );
 }

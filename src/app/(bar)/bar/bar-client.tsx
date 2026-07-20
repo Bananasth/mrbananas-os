@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { BarItem, BarEmployee, TimelineRow } from "@/server/services/qr-staff";
+import type { BarItem, BarEmployee, PickupOrder, TimelineRow } from "@/server/services/qr-staff";
 import {
   claimAction, startPreparingAction, startQcAction, passQcAction, completeAction,
   qcFailAction, uploadPhotoAction, openRecipeAction, closeRecipeAction, timelineAction,
+  completePickupAction,
   type ActionState,
 } from "./actions";
 
@@ -24,7 +25,17 @@ const btnPrimary = "rounded-md bg-accent px-2.5 py-1 text-xs font-semibold text-
 
 type Drawer = { kind: "recipe" | "method"; content: unknown; accessId: string | null; item: string };
 
-export function BarClient({ items, employees }: { items: BarItem[]; employees: BarEmployee[] }) {
+export function BarClient({
+  items,
+  employees,
+  pickups,
+  branchId,
+}: {
+  items: BarItem[];
+  employees: BarEmployee[];
+  pickups: PickupOrder[];
+  branchId: string;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [emp, setEmp] = useState<string>(employees[0]?.id ?? "");
@@ -47,6 +58,19 @@ export function BarClient({ items, employees }: { items: BarItem[]; employees: B
       const res = await action();
       if (!res.ok) setMsg({ type: "err", text: res.error ?? "error" });
       else { setMsg(null); router.refresh(); }
+    });
+  }
+
+  /**
+   * Pickup runner. Unlike `run`, it does NOT require the "I am" selector: qr_complete_pickup binds
+   * the handover to the AUTHENTICATED user's own employee row, so the selector is irrelevant here
+   * and using it would misattribute the audit.
+   */
+  function runPickup(orderId: string) {
+    start(async () => {
+      const res = await completePickupAction(orderId, branchId);
+      if (!res.ok) setMsg({ type: "err", text: res.error ?? "error" });
+      else { setMsg({ type: "ok", text: "ส่งมอบเรียบร้อย · Handed over." }); router.refresh(); }
     });
   }
 
@@ -134,6 +158,33 @@ export function BarClient({ items, employees }: { items: BarItem[]; employees: B
       </div>
 
       {msg ? <p className={`text-sm ${msg.type === "err" ? "text-red-600" : "text-green-700"}`}>{msg.text}</p> : null}
+
+      {/* Handover: order-level, every item completed. Empty for bakers (the read is manager/staff
+          only, mirroring the RPC) and whenever nothing is waiting to be handed over. */}
+      {pickups.length > 0 ? (
+        <section className="rounded-xl border border-border bg-card p-3">
+          <h2 className="text-sm font-bold">
+            พร้อมส่งมอบ <span className="font-normal text-muted">· Ready for pickup ({pickups.length})</span>
+          </h2>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {pickups.map((p) => (
+              <div key={p.orderId} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5">
+                <span className="text-sm font-semibold tabular-nums">
+                  คิว {p.queueNumber ?? "—"}
+                </span>
+                <button
+                  className={btnPrimary}
+                  disabled={pending}
+                  onClick={() => runPickup(p.orderId)}
+                  title="ยืนยันการส่งมอบให้ลูกค้า"
+                >
+                  ส่งมอบแล้ว · Handed over
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {LANES.map((lane) => {

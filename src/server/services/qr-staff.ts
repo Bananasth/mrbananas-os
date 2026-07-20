@@ -146,6 +146,71 @@ export async function listBarEmployees(branchId: string): Promise<Result<BarEmpl
   )
 }
 
+/**
+ * Pickup/handover roles — mirrors app.qr_complete_pickup's own authorization (tenant owner OR
+ * branch manager/staff). Baker is deliberately excluded: the RPC would reject them, so they are
+ * never shown a handover control. The RPC remains the authority; this only avoids a dead button.
+ */
+const PICKUP_ROLES = ['owner', 'manager', 'staff'] as const
+
+export type PickupOrder = { orderId: string; queueNumber: number | null; paidAt: string | null }
+
+/** Orders standing at ready_for_pickup for this branch — the handover worklist. */
+export async function listPickupQueue(branchId: string): Promise<Result<PickupOrder[], ServiceError>> {
+  const gate = await getServiceContext(PICKUP_ROLES)
+  if (!gate.ok) return gate
+  const branchOk = ensureBranch(gate.value.ctx, branchId)
+  if (!branchOk.ok) return branchOk
+  const { data, error } = await gate.value.db
+    .from('qr_order')
+    .select('order_id, queue_number, paid_at')
+    .eq('branch_id', branchId)
+    .eq('status', 'ready_for_pickup')
+    .order('queue_number', { ascending: true })
+  if (error) return err(serviceError('db', error.message))
+  return ok(
+    (data ?? []).map((r: { order_id: string; queue_number: number | null; paid_at: string | null }) => ({
+      orderId: r.order_id, queueNumber: r.queue_number, paidAt: r.paid_at,
+    })),
+  )
+}
+
+/**
+ * Confirm pickup/handover (ready_for_pickup -> completed) through the existing
+ * public.qr_complete_pickup wrapper. No new RPC and no new permission.
+ *
+ * The RPC binds the actor: p_employee_id must be the AUTHENTICATED user's own employee row at the
+ * order's branch, so — unlike the item RPCs — the board's "I am" selector must NOT be used here.
+ * We resolve the caller's own employee row the same way the RPC does; the RPC re-verifies it.
+ */
+export async function completePickup(
+  input: { orderId: string; branchId: string },
+): Promise<Result<unknown, ServiceError>> {
+  const gate = await getServiceContext(PICKUP_ROLES)
+  if (!gate.ok) return gate
+  const branchOk = ensureBranch(gate.value.ctx, input.branchId)
+  if (!branchOk.ok) return branchOk
+  const { ctx, db } = gate.value
+
+  const { data: emp, error: empErr } = await db
+    .from('employee')
+    .select('id')
+    .eq('user_id', ctx.userId)
+    .eq('branch_id', input.branchId)
+    .maybeSingle()
+  if (empErr) return err(serviceError('db', empErr.message))
+  if (!emp) {
+    return err(serviceError('validation', 'บัญชีนี้ไม่มีข้อมูลพนักงานที่สาขานี้ · No employee record for this account at this branch.'))
+  }
+
+  const { data, error } = await db.rpc('qr_complete_pickup', {
+    p_order_id: input.orderId,
+    p_employee_id: (emp as { id: string }).id,
+  })
+  if (error) return err(serviceError('validation', error.message))
+  return ok(data)
+}
+
 /** Per-item production timeline (unified view). */
 export async function getItemTimeline(orderItemId: string): Promise<Result<TimelineRow[], ServiceError>> {
   const gate = await getServiceContext(ROLES)
