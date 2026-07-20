@@ -3,8 +3,9 @@ import type { RoleKey } from "./claims";
 /**
  * The landing route for a role after login (and the redirect target for role mismatches).
  *
- * owner/manager -> back-office dashboard, staff -> POS. baker/customer have no surface yet
- * (KDS is a later phase), so they land on /no-access.
+ * owner/manager -> back-office dashboard, staff -> POS, baker -> the station board (the bar
+ * layout already admits "baker", so this only stops sending them to a dead end). customer has no
+ * internal surface, so they land on /no-access.
  */
 export function defaultRouteForRole(role: RoleKey): string {
   switch (role) {
@@ -14,6 +15,7 @@ export function defaultRouteForRole(role: RoleKey): string {
     case "staff":
       return "/pos";
     case "baker":
+      return "/bar";
     case "customer":
       return "/no-access";
   }
