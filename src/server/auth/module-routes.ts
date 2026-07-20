@@ -508,3 +508,94 @@ export function visibleDepartments(
     links: d.links.filter((l) => canSeeDeptLink(perms, userRoles, l)),
   })).filter((d) => d.links.length > 0);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reachability (operational shell)
+//
+// Holding a module permission is NOT the same as being able to open the page:
+// every department href except /pos and /bar is hosted by the owner-only /admin
+// layout. The operational shell therefore filters on REACHABILITY — the link's
+// own gate AND the role guard of the layout that hosts it — so an operational
+// user is never offered a link that would bounce them.
+//
+// These role sets mirror the layouts exactly; they grant nothing on their own.
+// The layouts remain the authority (this is menu logic).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** (dashboard)/layout.tsx */
+export const DASHBOARD_ROLES: readonly RoleKey[] = ["owner", "manager"];
+/** (pos)/layout.tsx */
+export const POS_ROLES: readonly RoleKey[] = ["owner", "manager", "staff"];
+/** (bar)/layout.tsx */
+export const BAR_ROLES: readonly RoleKey[] = ["owner", "manager", "staff", "baker"];
+/** (ops)/layout.tsx — every internal role; "customer" has no internal surface. */
+export const OPS_ROLES: readonly RoleKey[] = ["owner", "manager", "staff", "baker"];
+
+/** Which layout hosts this route (and therefore which guard it must pass). */
+export type HostSurface = "admin" | "dashboard" | "pos" | "bar" | "ops" | "unknown";
+
+const under = (href: string, prefix: string) => href === prefix || href.startsWith(`${prefix}/`);
+
+export function hostSurfaceForHref(href: string): HostSurface {
+  if (under(href, "/admin")) return "admin"; // owner-only unless ADMIN_MANAGER_ACCESS
+  if (under(href, "/dashboard")) return "dashboard";
+  if (under(href, "/pos")) return "pos";
+  if (under(href, "/bar")) return "bar";
+  if (under(href, "/ops")) return "ops";
+  return "unknown";
+}
+
+/**
+ * Can the user actually OPEN this link? Permission gate + hosting-layout guard.
+ * `canEnterAdmin` is supplied by the caller because it depends on the existing
+ * ADMIN_MANAGER_ACCESS flag, which this module deliberately does not read or change.
+ */
+export function canReachDeptLink(
+  perms: UserPermissions | null,
+  userRoles: readonly RoleKey[],
+  link: DeptLink,
+  opts: { canEnterAdmin: boolean },
+): boolean {
+  if (!link.href) return false; // no page yet
+  if (!canSeeDeptLink(perms, userRoles, link)) return false;
+  const holds = (roles: readonly RoleKey[]) => roles.some((r) => userRoles.includes(r));
+  switch (hostSurfaceForHref(link.href)) {
+    case "admin":
+      return opts.canEnterAdmin;
+    case "dashboard":
+      return holds(DASHBOARD_ROLES);
+    case "pos":
+      return holds(POS_ROLES);
+    case "bar":
+      return holds(BAR_ROLES);
+    case "ops":
+      return holds(OPS_ROLES);
+    default:
+      return false; // unknown host → fail-safe
+  }
+}
+
+/** A department link annotated for the operational shell. `blocked` renders disabled, never as a link. */
+export type OpsLink = DeptLink & { blocked?: boolean };
+export type OpsDepartment = Omit<Department, "links"> & { links: OpsLink[] };
+
+/**
+ * Departments for the operational shell. Links the user has no permission for are removed
+ * entirely; links they are permitted to but cannot reach (admin-hosted) are kept as DISABLED
+ * cards carrying the reason, so the shell is honest instead of offering a dead link.
+ */
+export function opsDepartments(
+  perms: UserPermissions | null,
+  userRoles: readonly RoleKey[],
+  opts: { canEnterAdmin: boolean },
+): OpsDepartment[] {
+  return DEPARTMENTS.map((d) => ({
+    ...d,
+    links: d.links.flatMap<OpsLink>((l) => {
+      if (!canSeeDeptLink(perms, userRoles, l)) return [];
+      if (!l.href) return [l]; // status "missing" — already disabled
+      if (canReachDeptLink(perms, userRoles, l, opts)) return [l];
+      return [{ ...l, blocked: true, note: l.note ?? "เปิดได้จากหน้าผู้ดูแลระบบเท่านั้น" }];
+    }),
+  })).filter((d) => d.links.length > 0);
+}

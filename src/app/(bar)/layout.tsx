@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { logout } from "@/server/auth/actions";
 import { requireRole } from "@/server/auth/guard";
 
@@ -13,6 +14,9 @@ export default async function BarLayout({ children }: { children: ReactNode }) {
             <span aria-hidden>🍌</span> Bar Station
           </span>
           <div className="flex items-center gap-3">
+            <Link href="/ops" className="text-sm text-accent hover:underline">
+              งานประจำวัน
+            </Link>
             <span className="text-sm capitalize text-muted">{ctx.primaryRole}</span>
             <form action={logout}>
               <button className="rounded-md border border-border px-3 py-1.5 text-sm transition-colors hover:bg-bg">

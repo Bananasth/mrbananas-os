@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { DeptLink, DeptStatus, VisibleDepartment } from "@/server/auth/module-routes";
+import type { DeptStatus, OpsDepartment, OpsLink } from "@/server/auth/module-routes";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "../admin/_components/ui";
 
 /**
@@ -17,14 +17,14 @@ const STATUS: Record<DeptStatus, { th: string; tone: "success" | "warning" | "ne
   missing: { th: "ยังไม่มีหน้ารองรับ", tone: "neutral" },
 };
 
-function LinkBody({ link }: { link: DeptLink }) {
+function LinkBody({ link }: { link: OpsLink }) {
   const status = STATUS[link.status];
   return (
     <>
       <CardHeader className="gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">{link.th}</CardTitle>
-          <Badge tone={status.tone}>{status.th}</Badge>
+          {link.blocked ? <Badge tone="neutral">เฉพาะผู้ดูแลระบบ</Badge> : <Badge tone={status.tone}>{status.th}</Badge>}
         </div>
         <p className="text-xs text-muted">{link.en}</p>
       </CardHeader>
@@ -36,12 +36,15 @@ function LinkBody({ link }: { link: DeptLink }) {
   );
 }
 
-/** The link cards of a single department. */
-export function DepartmentLinks({ links }: { links: readonly DeptLink[] }) {
+/**
+ * The link cards of a single department. A card renders as a real link only when it has an href
+ * AND is not `blocked`; otherwise it is inert, so no unreachable destination is ever clickable.
+ */
+export function DepartmentLinks({ links }: { links: readonly OpsLink[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {links.map((link) =>
-        link.href ? (
+        link.href && !link.blocked ? (
           <Link key={`${link.th}-${link.href}`} href={link.href} className="block">
             <Card className="h-full transition-colors hover:border-accent">
               <LinkBody link={link} />
@@ -57,14 +60,23 @@ export function DepartmentLinks({ links }: { links: readonly DeptLink[] }) {
   );
 }
 
-/** The hub grid: one card per department, linking to its landing page. */
-export function DepartmentGrid({ departments }: { departments: readonly VisibleDepartment[] }) {
+/**
+ * The hub grid: one card per department, linking to its landing page.
+ * `basePath` lets the operational shell point at /ops without a second grid component.
+ */
+export function DepartmentGrid({
+  departments,
+  basePath = "/admin/departments",
+}: {
+  departments: readonly OpsDepartment[];
+  basePath?: string;
+}) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {departments.map((d) => {
-        const ready = d.links.filter((l) => l.status === "ready").length;
+        const ready = d.links.filter((l) => !l.blocked && l.status === "ready").length;
         return (
-          <Link key={d.slug} href={`/admin/departments/${d.slug}`} className="block">
+          <Link key={d.slug} href={`${basePath}/${d.slug}`} className="block">
             <Card className="h-full transition-colors hover:border-accent">
               <CardHeader className="flex-row items-center gap-3">
                 <span className="text-2xl" aria-hidden>
