@@ -131,3 +131,24 @@ export async function completeOrder(
   if (error) return err(serviceError('db', error.message))
   return ok(data as SalesOrder)
 }
+
+/**
+ * Bridge a PAID POS order into the existing production pipeline (qr_order -> queue -> prep_item
+ * -> print jobs) via the guarded public.pos_enqueue_production_order wrapper. Idempotent: a retry
+ * returns the same queue number and creates nothing new. Does not deduct stock, touch payments,
+ * issue any tax document, or change sales_order.status — all of that stays where it already is.
+ */
+export async function enqueuePosProductionOrder(
+  input: CompleteOrderInput,
+): Promise<Result<unknown, ServiceError>> {
+  const gate = await getServiceContext(WRITE_ROLES)
+  if (!gate.ok) return gate
+  const parsed = parseInput(CompleteOrderSchema, input)
+  if (!parsed.ok) return parsed
+  const { db } = gate.value
+  const { data, error } = await db.rpc('pos_enqueue_production_order', {
+    p_order_id: parsed.value.orderId,
+  })
+  if (error) return err(serviceError('db', error.message))
+  return ok(data)
+}

@@ -4,6 +4,7 @@ import {
   type BomLine,
   completeOrder,
   createOrder,
+  enqueuePosProductionOrder,
   fulfilOrderResolved,
   getOptionResolutions,
   getRecipeIngredients,
@@ -122,6 +123,9 @@ export async function checkout(input: CheckoutInput): Promise<CheckoutResult> {
 
   const done = await completeOrder({ orderId });
   if (!done.ok) return fail(done.error.message, "complete");
+
+  const prod = await enqueuePosProductionOrder({ orderId });
+  if (!prod.ok) return fail(prod.error.message, "production");
 
   const inv = await issueTaxInvoice({ orderId });
   if (!inv.ok) return fail(inv.error.message, "invoice");
