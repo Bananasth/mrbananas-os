@@ -74,6 +74,16 @@ export async function createOrder(
   if (orderErr) return err(serviceError('db', orderErr.message))
   const order = orderRow as SalesOrder
 
+  // DB-3C prerequisite L3 (SAFE LEGACY): persist the REAL submitted line order. `idx` is the
+  // customer/cashier-submitted array position, so `idx + 1` is the proven 1-based ordinal. It is
+  // never derived from a timestamp, uuid, name, price or database execution order, and never from
+  // MAX(position) + 1.
+  //
+  // Rollout is SQL-first and both application versions keep working. An OLD writer that omits these
+  // two fields is NOT rejected: the order_item_line_position_gate trigger tags the row
+  // line_position_provenance = 'legacy_unproven_line_order' with line_position left NULL, so the
+  // order stays fully operational. Such compatibility-window rows are NOT DB-3C eligible and remain
+  // on the legacy path; only rows carrying this proven submitted ordinal are position-eligible.
   const itemRows = o.items.map((i, idx) => ({
     tenant_id: ctx.tenantId,
     branch_id: o.branchId,
@@ -85,6 +95,8 @@ export async function createOrder(
     qty: i.qty,
     unit_price: resolved[idx]!.unitPrice,
     line_tax: totals.lines[idx]!.tax,
+    line_position: idx + 1,
+    line_position_provenance: 'submitted_ordinal',
   }))
   const { data: items, error: itemsErr } = await db.from('order_item').insert(itemRows).select('*')
   if (itemsErr) return err(serviceError('db', itemsErr.message))
